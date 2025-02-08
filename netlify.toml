@@ -1,0 +1,28 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[functions]
+  node_bundler = "esbuild"
+
+# Run the market insights update function daily at midnight UTC
+[[plugins]]
+  package = "@netlify/plugin-functions-scheduled-function"
+
+[[plugins.inputs.schedules]]
+  handler = "update-market-insights"
+  schedule = "0 0 * * *"
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

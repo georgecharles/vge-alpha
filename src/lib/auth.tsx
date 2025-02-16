@@ -95,31 +95,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (data.user) {
         // Create the profile
-        const { error: profileError } = await supabase.from("profiles").insert([
-          {
-            id: data.user.id,
-            email,
-            first_name: firstName,
-            last_name: lastName,
-            full_name: `${firstName} ${lastName}`,
-            role: "user",
-            subscription_tier: "free",
-            subscription_status: "active",
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          },
-        ]);
+        const { error: profileError } = await supabase.from("profiles").insert({
+          id: data.user.id,
+          email,
+          full_name: `${firstName} ${lastName}`,
+          role: "user",
+          subscription_tier: "free",
+          subscription_status: "active",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
 
         if (profileError) {
           console.error("Profile creation error:", profileError);
-          throw new Error(
-            "Failed to create user profile. Please contact support.",
-          );
+          throw profileError;
         }
-
-        return { user: data.user, session: data.session };
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Sign up error:", error);
       throw error;
     }

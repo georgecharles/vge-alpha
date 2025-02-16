@@ -30,7 +30,7 @@ export function PasswordProtect({ onSuccess }: PasswordProtectProps) {
       {/* Content */}
       <div className="relative z-10 max-w-lg w-full text-center mb-8">
         <img
-          src="/myvge-logo-white.png"
+          src="https://i.postimg.cc/GpdY6N74/my-1920-x-1080-px-1.png"
           alt="MyVGE"
           className="h-16 mx-auto mb-4 invert-[0.4] sepia-[.75] saturate-[.6] hue-rotate-[130deg] brightness-[0.8] contrast-[.8]"
         />

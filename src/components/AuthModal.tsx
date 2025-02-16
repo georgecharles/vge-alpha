@@ -11,6 +11,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { useToast } from "./ui/use-toast";
 import { useAuth } from "../lib/auth";
+import { createCheckoutSession } from "../lib/stripe";
 
 type AuthMode = "signin" | "signup";
 
@@ -56,18 +57,28 @@ export function AuthModal({
           setTimeout(() => onClose(), 500);
         }
       } else {
-        await signUp(
+        const { user } = await signUp(
           formData.email,
           formData.password,
           formData.firstName,
           formData.lastName,
         );
-        setShowConfirmation(true);
-        toast({
-          title: "Check your email",
-          description:
-            "Please check your inbox and confirm your email address to continue.",
-        });
+
+        // Check if there's a pending subscription
+        const pendingPriceId = localStorage.getItem(
+          "pending_subscription_price_id",
+        );
+        if (pendingPriceId && user) {
+          localStorage.removeItem("pending_subscription_price_id");
+          await createCheckoutSession(pendingPriceId, user.id);
+        } else {
+          setShowConfirmation(true);
+          toast({
+            title: "Check your email",
+            description:
+              "Please check your inbox and confirm your email address to continue.",
+          });
+        }
       }
     } catch (error: any) {
       toast({

@@ -22,11 +22,15 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
 
   const handleSubscribe = async (priceId: string) => {
     if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to subscribe to a plan.",
-        variant: "destructive",
+      // Store the selected price ID in localStorage
+      localStorage.setItem("pending_subscription_price_id", priceId);
+
+      // Trigger sign up modal
+      const event = new CustomEvent("open-auth-modal", {
+        detail: { mode: "signup" },
       });
+      window.dispatchEvent(event);
+      onClose();
       return;
     }
 

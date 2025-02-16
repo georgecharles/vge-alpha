@@ -7,8 +7,8 @@ export async function getFeaturedProperties() {
     .select(
       `
       *,
-      assigned_user:profiles!properties_assigned_user_id_fkey(full_name, email),
-      author:profiles!properties_created_by_fkey(full_name, email)
+      assigned_user:profiles!properties_assigned_user_id_fkey(id, full_name, email),
+      author:profiles!properties_created_by_fkey(id, full_name, email)
     `,
     )
     .order("created_at", { ascending: false })
@@ -19,7 +19,7 @@ export async function getFeaturedProperties() {
     data?.map((property) => ({
       ...property,
       images: property.images || [
-        `https://images.unsplash.com/photo-${Math.floor(Math.random() * 10) + 1}-house?auto=format&fit=crop&q=80&w=800&h=600`,
+        `https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600`,
       ],
     })) || []
   );

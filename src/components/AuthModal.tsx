@@ -30,7 +30,7 @@ export function AuthModal({
   React.useEffect(() => {
     setMode(defaultMode);
   }, [defaultMode]);
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [showConfirmation, setShowConfirmation] = React.useState(false);
   const { signIn, signUp } = useAuth();
   const { toast } = useToast();
@@ -44,7 +44,7 @@ export function AuthModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setIsSubmitting(true);
 
     try {
       if (mode === "signin") {
@@ -74,9 +74,9 @@ export function AuthModal({
         } else {
           setShowConfirmation(true);
           toast({
-            title: "Check your email",
+            title: "Welcome to MyVGE Alpha!",
             description:
-              "Please check your inbox and confirm your email address to continue.",
+              "Thank you for joining us during our alpha testing phase.",
           });
         }
       }
@@ -87,7 +87,7 @@ export function AuthModal({
         variant: "destructive",
       });
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -96,16 +96,27 @@ export function AuthModal({
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
-            <DialogTitle>Check Your Email</DialogTitle>
+            <DialogTitle>Welcome to MyVGE Alpha!</DialogTitle>
             <DialogDescription className="space-y-2">
+              <p className="text-lg font-medium text-primary">
+                Thank you for joining MyVGE during our alpha testing phase!
+              </p>
               <p>
-                We've sent you a confirmation email. Please check your inbox and
-                click the verification link to complete your registration.
+                We've sent a confirmation email to your inbox. Please click the
+                verification link to activate your account and start exploring
+                MyVGE.
               </p>
               <p className="text-sm text-muted-foreground">
-                Note: You must confirm your email before you can sign in. Please
+                Note: You must confirm your email before signing in. Please
                 check your spam folder if you don't see the email.
               </p>
+              <div className="mt-4 p-4 bg-primary/10 rounded-lg">
+                <p className="text-sm font-medium">
+                  As an alpha tester, your feedback is invaluable to us. We're
+                  excited to have you on board and look forward to your insights
+                  as we continue to improve the platform.
+                </p>
+              </div>
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col space-y-4 pt-4">
@@ -133,7 +144,7 @@ export function AuthModal({
           <DialogDescription>
             {mode === "signin"
               ? "Welcome back! Please sign in to continue."
-              : "Create an account to start exploring properties."}
+              : "Join MyVGE and start exploring properties."}
           </DialogDescription>
         </DialogHeader>
 
@@ -198,8 +209,8 @@ export function AuthModal({
           </div>
 
           <div className="flex flex-col space-y-4 pt-4">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting
                 ? "Loading..."
                 : mode === "signin"
                   ? "Sign In"

@@ -201,7 +201,7 @@ const Header = ({
                     >
                       <Avatar className="h-10 w-10">
                         <AvatarImage
-                          src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${userProfile?.email}`}
+                          src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.full_name || "")}&background=random`}
                           alt={userProfile?.full_name || "User avatar"}
                         />
                         <AvatarFallback className="bg-primary/10">

@@ -10,7 +10,7 @@ import {
   Route,
 } from "react-router-dom";
 import { ProgressBar } from "./components/ui/progress-bar";
-import AuthProvider from "./lib/auth";
+import { AuthProvider } from "./lib/auth";
 import { Toaster } from "./components/ui/toaster";
 import Home from "./components/home";
 import Dashboard from "./components/Dashboard";
@@ -28,6 +28,7 @@ import ResearchPage from "./components/ResearchPage";
 import BlogPage from "./components/BlogPage";
 import InvestmentCalculator from "./components/InvestmentCalculator";
 import HelpSupportPage from "./components/HelpSupportPage";
+import { ChatBot } from "./components/ChatBot";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -103,6 +104,7 @@ function AppContent() {
       </motion.div>
       {import.meta.env.VITE_TEMPO === "true" && useRoutes(routes)}
       <Toaster />
+      <ChatBot />
     </div>
   );
 }

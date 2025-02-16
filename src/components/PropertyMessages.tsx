@@ -95,7 +95,7 @@ export function PropertyMessages({ receiverId }: PropertyMessagesProps) {
             >
               <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${isSender ? message.sender.email : message.receiver.email}`}
+                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(isSender ? message.sender.full_name : message.receiver.full_name)}&background=random`}
                   alt={
                     isSender
                       ? message.sender.full_name

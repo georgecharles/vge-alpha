@@ -1,8 +1,9 @@
 import React from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
-import { PageTransition } from "./ui/page-transition";
-import { Layout } from "./Layout";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Textarea } from "./ui/textarea";
 import {
   Mail,
   Phone,
@@ -11,6 +12,9 @@ import {
   HelpCircle,
   Book,
 } from "lucide-react";
+import { Layout } from "./Layout";
+import HeroSection from "./HeroSection";
+import { PageTransition } from "./ui/page-transition";
 
 export default function HelpSupportPage() {
   const supportCategories = [
@@ -72,22 +76,28 @@ export default function HelpSupportPage() {
       description: "Chat with our support team",
       action: "Available 24/7",
       buttonText: "Start Chat",
-      onClick: () => alert("Live chat feature coming soon!"),
+      onClick: () => {
+        const event = new CustomEvent("open-messages", {
+          detail: { receiverId: "support" },
+        });
+        window.dispatchEvent(event);
+      },
     },
   ];
 
   return (
     <PageTransition>
       <Layout>
-        <main className="container mx-auto px-4 py-8 pt-24">
+        <HeroSection
+          title="Help & Support Center"
+          subtitle="Get the assistance you need with our comprehensive support resources"
+          backgroundImage="https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3"
+          showSearch={false}
+          showStats={false}
+          height="h-[400px]"
+        />
+        <main className="container mx-auto px-4 py-8">
           <div className="max-w-7xl mx-auto space-y-12">
-            <div className="text-center">
-              <h1 className="text-4xl font-bold mb-4">Help & Support</h1>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Get the help you need with our comprehensive support resources
-              </p>
-            </div>
-
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {supportCategories.map((category, index) => (
                 <Card key={index} className="hover:shadow-lg transition-shadow">

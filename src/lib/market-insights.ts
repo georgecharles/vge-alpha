@@ -27,8 +27,34 @@ export async function fetchPropertyNews() {
 
 export async function generateMarketInsights(prompt: string) {
   try {
+    const formattedPrompt = `${prompt}
+
+Provide a detailed analysis using EXACTLY this format (do not include numbers or asterisks at the start of sections):
+
+## Latest Tax Law Changes
+- The current stamp duty rates and thresholds
+- Recent changes to capital gains tax
+- Upcoming tax proposals
+
+## Landlord Regulations
+- Latest HMO licensing requirements
+- Recent changes to tenant rights
+- Current safety regulations
+
+## Government Policies
+- New housing policies
+- Regional development initiatives
+- Planning permission changes
+
+## Market Impact Analysis
+- Effect on property values
+- Changes to rental yields
+- Investment recommendations
+
+Use ONLY ## for section headers and - for bullet points. Do not use any other formatting, numbers, or special characters. Each bullet point should be a complete sentence with specific dates and numbers where possible.`;
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${import.meta.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -39,7 +65,7 @@ export async function generateMarketInsights(prompt: string) {
             {
               parts: [
                 {
-                  text: prompt,
+                  text: formattedPrompt,
                 },
               ],
             },
@@ -48,13 +74,26 @@ export async function generateMarketInsights(prompt: string) {
       },
     );
 
-    const data = await response.json();
-    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
-      throw new Error("Invalid response from Gemini API");
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const insights = data.candidates[0].content.parts[0].text;
-    await storeMarketInsights(insights);
+    const data = await response.json();
+    if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+      throw new Error("Invalid response format from Gemini API");
+    }
+
+    // Clean up the response to ensure proper formatting
+    let insights = data.candidates[0].content.parts[0].text;
+    insights = insights
+      .replace(/\*\*/g, "") // Remove any asterisks
+      .replace(/\*\s/g, "- ") // Replace any remaining asterisk bullets with dashes
+      .replace(/\d+\.\s/g, "- ") // Replace numbered lists with bullet points
+      .replace(/^[0-9]\./gm, "-") // Replace numbers at start of lines with dashes
+      .replace(/\n\n+/g, "\n\n") // Normalize line spacing
+      .replace(/\n\s*\n/g, "\n\n") // Fix multiple blank lines
+      .trim();
+
     return insights;
   } catch (error) {
     console.error("Error generating insights:", error);

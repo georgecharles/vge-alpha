@@ -3,18 +3,29 @@ import { useAuth } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import { Building2, Star, Plus, TrendingUp, PoundSterling } from "lucide-react";
+import {
+  Building2,
+  Star,
+  Plus,
+  TrendingUp,
+  PoundSterling,
+  Users,
+  Crown,
+  Bitcoin,
+} from "lucide-react";
 import { getSavedProperties } from "../lib/properties";
 import { AddPropertyModal } from "./AddPropertyModal";
 import PropertyCard from "./PropertyCard";
 import { supabase } from "../lib/supabase";
 import { Layout } from "./Layout";
+import { BitcoinPrice } from "./BitcoinPrice";
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
   const navigate = useNavigate();
   const [savedProperties, setSavedProperties] = React.useState<any[]>([]);
   const [addedProperties, setAddedProperties] = React.useState<any[]>([]);
+  const [users, setUsers] = React.useState<any[]>([]);
   const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] =
     React.useState(false);
   const [portfolioStats, setPortfolioStats] = React.useState({
@@ -24,6 +35,39 @@ export default function Dashboard() {
     totalProfit: 0,
     monthlyIncome: 0,
   });
+
+  const loadUsers = React.useCallback(async () => {
+    if (!user || profile?.role !== "admin") return;
+    try {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+      setUsers(data || []);
+    } catch (error) {
+      console.error("Error loading users:", error);
+    }
+  }, [user, profile]);
+
+  const updateUserSubscription = async (userId: string, tier: string) => {
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          subscription_tier: tier,
+          subscription_status: "active",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+
+      if (error) throw error;
+      loadUsers();
+    } catch (error) {
+      console.error("Error updating subscription:", error);
+    }
+  };
 
   const loadProperties = React.useCallback(async () => {
     if (!user) return;
@@ -77,7 +121,8 @@ export default function Dashboard() {
       return;
     }
     loadProperties();
-  }, [user, navigate, loadProperties]);
+    loadUsers();
+  }, [user, navigate, loadProperties, loadUsers]);
 
   return (
     <Layout>
@@ -90,7 +135,7 @@ export default function Dashboard() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <Card>
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -135,7 +180,131 @@ export default function Dashboard() {
                 </p>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold">BTC Value</h3>
+                  <Bitcoin className="w-5 h-5 text-[#F7931A]" />
+                </div>
+                <BitcoinPrice amount={portfolioStats.totalValue} />
+                <p className="text-sm text-muted-foreground mt-2">
+                  Portfolio in BTC
+                </p>
+              </CardContent>
+            </Card>
           </div>
+
+          {profile?.role === "admin" && (
+            <div className="space-y-6">
+              <h2 className="text-2xl font-semibold flex items-center gap-2">
+                <Users className="w-5 h-5" /> User Management
+              </h2>
+              <div className="space-y-4">
+                {users.map((user) => (
+                  <Card key={user.id} className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{user.full_name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {user.email}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-2">
+                          <Crown className="w-4 h-4 text-primary" />
+                          <select
+                            value={user.subscription_tier}
+                            onChange={(e) =>
+                              updateUserSubscription(user.id, e.target.value)
+                            }
+                            className="bg-background border rounded px-2 py-1"
+                          >
+                            <option value="free">Free</option>
+                            <option value="basic">Basic</option>
+                            <option value="pro">Pro</option>
+                            <option value="premium">Premium</option>
+                          </select>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={user.role}
+                            onChange={async (e) => {
+                              try {
+                                const { error } = await supabase
+                                  .from("profiles")
+                                  .update({ role: e.target.value })
+                                  .eq("id", user.id);
+                                if (error) throw error;
+                                loadUsers();
+                              } catch (error) {
+                                console.error("Error updating role:", error);
+                              }
+                            }}
+                            className="bg-background border rounded px-2 py-1"
+                          >
+                            <option value="user">User</option>
+                            <option value="moderator">Moderator</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                        </div>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={async () => {
+                            if (
+                              confirm(
+                                "Are you sure you want to delete this user?",
+                              )
+                            ) {
+                              try {
+                                const { error } = await supabase
+                                  .from("profiles")
+                                  .delete()
+                                  .eq("id", user.id);
+                                if (error) throw error;
+                                loadUsers();
+                              } catch (error) {
+                                console.error("Error deleting user:", error);
+                              }
+                            }
+                          }}
+                        >
+                          Delete
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={async () => {
+                            const newPassword = prompt("Enter new password:");
+                            if (newPassword) {
+                              try {
+                                const { error } =
+                                  await supabase.auth.admin.updateUserById(
+                                    user.id,
+                                    { password: newPassword },
+                                  );
+                                if (error) throw error;
+                                alert("Password updated successfully");
+                              } catch (error) {
+                                console.error(
+                                  "Error resetting password:",
+                                  error,
+                                );
+                                alert("Failed to reset password");
+                              }
+                            }
+                          }}
+                        >
+                          Reset Password
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">

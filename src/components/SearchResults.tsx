@@ -5,6 +5,7 @@ import HeroSection from "./HeroSection";
 import { useAuth } from "../lib/auth";
 import { supabase } from "../lib/supabase";
 import { PageTransition } from "./ui/page-transition";
+import { PropertyDetailsModal } from "./PropertyDetailsModal";
 
 interface FeaturedPropertiesProps {
   results?: any[];
@@ -19,65 +20,104 @@ const FeaturedProperties = ({
 }: FeaturedPropertiesProps = {}) => {
   const { user, profile } = useAuth();
   const [properties, setProperties] = React.useState<any[]>([]);
+  const [selectedProperty, setSelectedProperty] = React.useState<any>(null);
+
+  const handleMessageAuthor = (authorId: string) => {
+    // Open the chat with the selected author
+    const event = new CustomEvent("open-messages", {
+      detail: { receiverId: authorId },
+    });
+    window.dispatchEvent(event);
+  };
 
   React.useEffect(() => {
     if (results) {
       setProperties(results);
     } else {
-      const loadDeals = async () => {
-        try {
-          const { data, error } = await supabase
-            .from("deals")
-            .select(
-              `
-              id,
-              title,
-              description,
-              property_id,
-              type,
-              status,
-              original_price,
-              deal_price,
-              potential_profit,
-              roi_percentage,
-              created_by,
-              created_at,
-              updated_at,
-              is_premium,
-              images,
-              location,
-              key_features,
-              created_by:profiles!deals_created_by_fkey(full_name, email)
-            `,
-            )
-            .order("created_at", { ascending: false });
-
-          if (error) throw error;
-          setProperties(
-            data?.map((deal) => ({
-              id: deal.id,
-              address: deal.title || "No Title",
-              price: deal.deal_price || 0,
-              original_price: deal.original_price || 0,
-              squareFootage: 0,
-              bedrooms: 0,
-              bathrooms: 0,
-              isPremium: deal.is_premium || false,
-              author: deal.created_by,
-              type: deal.type || "Unknown",
-              status: deal.status || "Available",
-              potential_profit: deal.potential_profit || 0,
-              roi_percentage: deal.roi_percentage || 0,
-              images: deal.images || [],
-              location: deal.location || "",
-              key_features: deal.key_features || [],
-            })) || [],
-          );
-        } catch (error) {
-          console.error("Error loading deals:", error);
-        }
-      };
-      loadDeals();
+      // Mock data for deals
+      const mockDeals = [
+        {
+          id: "1",
+          title: "High-Yield Student Housing Investment",
+          deal_price: 450000,
+          original_price: 500000,
+          potential_profit: 150000,
+          roi_percentage: 33.3,
+          author: {
+            id: "1",
+            full_name: "Sarah Johnson",
+            email: "sarah@example.com",
+          },
+          images: [
+            "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
+          ],
+        },
+        {
+          id: "2",
+          title: "Commercial Property Development Opportunity",
+          deal_price: 850000,
+          original_price: 950000,
+          potential_profit: 300000,
+          roi_percentage: 35.3,
+          author: {
+            id: "2",
+            full_name: "Michael Smith",
+            email: "michael@example.com",
+          },
+          images: [
+            "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
+          ],
+        },
+        {
+          id: "3",
+          title: "City Center Apartment Block",
+          deal_price: 1200000,
+          original_price: 1400000,
+          potential_profit: 400000,
+          roi_percentage: 33.3,
+          author: {
+            id: "3",
+            full_name: "Emma Davis",
+            email: "emma@example.com",
+          },
+          images: [
+            "https://images.unsplash.com/photo-1464938050520-ef2270bb8ce8",
+          ],
+        },
+        {
+          id: "4",
+          title: "Mixed-Use Development Site",
+          deal_price: 2500000,
+          original_price: 2800000,
+          potential_profit: 900000,
+          roi_percentage: 36,
+          author: {
+            id: "4",
+            full_name: "James Wilson",
+            email: "james@example.com",
+          },
+          images: [
+            "https://images.unsplash.com/photo-1497366216548-37526070297c",
+          ],
+        },
+        {
+          id: "5",
+          title: "Retail Park Investment",
+          deal_price: 3500000,
+          original_price: 4000000,
+          potential_profit: 1200000,
+          roi_percentage: 34.3,
+          author: {
+            id: "5",
+            full_name: "Lisa Brown",
+            email: "lisa@example.com",
+          },
+          images: [
+            "https://images.unsplash.com/photo-1497366858526-0766cadbe8fa",
+          ],
+        },
+      ];
+      setProperties(mockDeals);
     }
   }, [results]);
 
@@ -119,23 +159,41 @@ const FeaturedProperties = ({
                   <PropertyCard
                     key={property.id}
                     id={property.id}
-                    address={property.address}
-                    price={property.price}
+                    address={property.property?.address || property.title}
+                    price={property.deal_price || property.property?.price}
                     original_price={property.original_price}
-                    squareFootage={property.squareFootage}
-                    bedrooms={property.bedrooms}
-                    bathrooms={property.bathrooms}
-                    isPremium={property.isPremium}
+                    squareFootage={property.property?.square_footage}
+                    bedrooms={property.property?.bedrooms}
+                    bathrooms={property.property?.bathrooms}
+                    isPremium={property.is_premium}
                     isSubscriber={profile?.subscription_tier !== "free"}
                     author={property.author}
-                    type={property.type}
+                    type="deal"
                     status={property.status}
                     potential_profit={property.potential_profit}
                     roi_percentage={property.roi_percentage}
-                    images={property.images}
+                    images={[
+                      property.images && typeof property.images === "string"
+                        ? property.images
+                        : Array.isArray(property.images) &&
+                            property.images.length > 0
+                          ? property.images[0]
+                          : `https://source.unsplash.com/random/800x600?semi,detached&sig=${property.id}`,
+                    ]}
+                    onMessageAuthor={handleMessageAuthor}
+                    onClick={() => setSelectedProperty(property)}
                   />
                 ))}
               </div>
+            )}
+
+            {selectedProperty && (
+              <PropertyDetailsModal
+                isOpen={!!selectedProperty}
+                onClose={() => setSelectedProperty(null)}
+                property={selectedProperty}
+                onMessageAuthor={handleMessageAuthor}
+              />
             )}
           </div>
         </div>

@@ -7,18 +7,22 @@ import { useAuth } from "../lib/auth";
 import { useToast } from "./ui/use-toast";
 import { LegalDisclaimer } from "./LegalDisclaimer";
 import { Footer } from "./Footer";
+import { AuthModal } from "./AuthModal";
 
 export default function PricingPage() {
   const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
+  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
+  const [authMode, setAuthMode] = React.useState<"signin" | "signup">("signin");
 
   const handleSubscribe = async (priceId: string) => {
     if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please sign in to subscribe to a plan.",
-        variant: "destructive",
-      });
+      // Store the selected price ID in localStorage
+      localStorage.setItem("pending_subscription_price_id", priceId);
+
+      // Trigger sign up modal
+      setAuthMode("signup");
+      setIsAuthModalOpen(true);
       return;
     }
 
@@ -39,10 +43,12 @@ export default function PricingPage() {
         isAuthenticated={!!user}
         userProfile={profile || undefined}
         onSignIn={() => {
-          window.location.href = "/";
+          setAuthMode("signin");
+          setIsAuthModalOpen(true);
         }}
         onSignUp={() => {
-          window.location.href = "/";
+          setAuthMode("signup");
+          setIsAuthModalOpen(true);
         }}
         onSignOut={async () => {
           try {
@@ -108,6 +114,12 @@ export default function PricingPage() {
         </div>
       </main>
       <Footer />
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        defaultMode={authMode}
+      />
     </div>
   );
 }

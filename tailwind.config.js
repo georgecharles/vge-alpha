@@ -67,6 +67,23 @@ module.exports = {
         "bounce-in": "cubic-bezier(0.68, -0.55, 0.265, 1.55)",
       },
       keyframes: {
+        "ken-burns": {
+          "0%": { transform: "scale(1) translate(0)" },
+          "50%": { transform: "scale(1.1) translate(-1%, -1%)" },
+          "100%": { transform: "scale(1) translate(0)" },
+        },
+        float: {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-20px)" },
+        },
+        "float-slow": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        },
+        "float-slower": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-5px)" },
+        },
         "fade-in-up": {
           "0%": {
             opacity: "0",
@@ -113,6 +130,10 @@ module.exports = {
         },
       },
       animation: {
+        "ken-burns": "ken-burns 20s ease-in-out infinite",
+        float: "float 3s ease-in-out infinite",
+        "float-slow": "float-slow 5s ease-in-out infinite",
+        "float-slower": "float-slower 7s ease-in-out infinite",
         "fade-in-up": "fade-in-up 0.5s cubic-bezier(0.16, 1, 0.3, 1)",
         "scale-in": "scale-in 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
         "slide-in-right": "slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1)",

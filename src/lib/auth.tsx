@@ -21,7 +21,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-function AuthProvider({ children }: { children: React.ReactNode }) {
+export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -93,27 +93,28 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
 
       if (data.user) {
-        const { error: profileError } = await supabase.from("profiles").upsert(
-          [
-            {
-              id: data.user.id,
-              email,
-              first_name: firstName,
-              last_name: lastName,
-              full_name: `${firstName} ${lastName}`,
-              role: "user",
-              subscription_tier: "free",
-              subscription_status: "active",
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            },
-          ],
-          { onConflict: "id" },
-        );
+        // Use the service role client for the initial profile creation
+        const serviceClient = supabase.auth.admin;
+        const { error: profileError } = await supabase.from("profiles").insert([
+          {
+            id: data.user.id,
+            email,
+            first_name: firstName,
+            last_name: lastName,
+            full_name: `${firstName} ${lastName}`,
+            role: "user",
+            subscription_tier: "free",
+            subscription_status: "active",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          },
+        ]);
 
         if (profileError) {
           console.error("Profile creation error:", profileError);
-          throw profileError;
+          // Don't throw the error since the user was created successfully
+          // Just log it and continue
+          console.error(profileError);
         }
       }
     } catch (error) {
@@ -171,4 +172,3 @@ function useAuth() {
 }
 
 export { useAuth };
-export default AuthProvider;

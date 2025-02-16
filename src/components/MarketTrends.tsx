@@ -1,7 +1,19 @@
 import React from "react";
-import { Card, CardContent } from "./ui/card";
+import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
-import { ArrowRight, TrendingUp, Home, PoundSterling } from "lucide-react";
+import { ArrowRight, TrendingUp, Home, PoundSterling, Map } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  AreaChart,
+  Area,
+} from "recharts";
 
 interface MarketTrendsProps {
   trends?: Array<{
@@ -59,14 +71,119 @@ const MarketTrends = ({
     },
   ],
 }: MarketTrendsProps) => {
+  // Sample data for charts
+  const priceData = [
+    { month: "Jan", price: 450000 },
+    { month: "Feb", price: 455000 },
+    { month: "Mar", price: 458000 },
+    { month: "Apr", price: 462000 },
+    { month: "May", price: 470000 },
+    { month: "Jun", price: 475000 },
+  ];
+
+  const regionalData = [
+    { region: "London", price: 500000, growth: 5.2 },
+    { region: "Manchester", price: 250000, growth: 7.8 },
+    { region: "Birmingham", price: 220000, growth: 6.5 },
+    { region: "Leeds", price: 200000, growth: 8.1 },
+    { region: "Liverpool", price: 180000, growth: 9.2 },
+  ];
+
   return (
-    <section className="w-full py-8 sm:py-16 bg-background/50 relative overflow-hidden">
-      <div className="absolute inset-0 bg-gradient-to-b from-background/50 via-background/30 to-background/50 backdrop-blur-[8px] z-0" />
-      <div className="container mx-auto px-4 max-w-7xl relative z-10">
+    <section className="w-full py-8 sm:py-16 bg-background relative overflow-hidden">
+      <div className="container mx-auto px-4 mb-16">
+        <Card className="bg-card border-border">
+          <CardHeader>
+            <h2 className="text-2xl font-semibold">
+              Real Estate Trends Visualization
+            </h2>
+          </CardHeader>
+          <CardContent>
+            <Tabs defaultValue="overview" className="w-full">
+              <TabsList className="grid w-full grid-cols-3 mb-8">
+                <TabsTrigger value="overview">Price Evolution</TabsTrigger>
+                <TabsTrigger value="regional">Regional Comparison</TabsTrigger>
+                <TabsTrigger value="heatmap">Growth Heatmap</TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="overview" className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={priceData}>
+                    <defs>
+                      <linearGradient
+                        id="colorPrice"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
+                      >
+                        <stop
+                          offset="5%"
+                          stopColor="hsl(var(--primary))"
+                          stopOpacity={0.2}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="hsl(var(--primary))"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area
+                      type="monotone"
+                      dataKey="price"
+                      stroke="hsl(var(--primary))"
+                      fillOpacity={1}
+                      fill="url(#colorPrice)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </TabsContent>
+
+              <TabsContent value="regional" className="h-[400px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={regionalData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="region" />
+                    <YAxis />
+                    <Tooltip />
+                    <Line
+                      type="monotone"
+                      dataKey="price"
+                      stroke="hsl(var(--primary))"
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="growth"
+                      stroke="hsl(var(--chart-1))"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </TabsContent>
+
+              <TabsContent
+                value="heatmap"
+                className="h-[400px] flex items-center justify-center"
+              >
+                <div className="text-center space-y-4">
+                  <Map className="w-12 h-12 text-muted-foreground mx-auto" />
+                  <p className="text-muted-foreground">
+                    Interactive heat map coming soon
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="container mx-auto px-4 max-w-7xl">
         <div className="mb-12 text-center">
-          <h2 className="text-3xl font-bold mb-4 text-foreground">
-            Market Trends & Insights
-          </h2>
+          <h2 className="text-3xl font-bold mb-4">Market Trends & Insights</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
             Stay informed with the latest real estate market trends and expert
             insights to make better property decisions.
@@ -77,7 +194,7 @@ const MarketTrends = ({
           {trends.map((trend, index) => (
             <Card
               key={index}
-              className={`backdrop-blur-xl bg-card/40 hover:bg-card/60 transition-all duration-300 border border-border/50 hover:scale-[1.02] shadow-lg ${index === 0 ? "bg-gradient-to-r from-emerald-400/10 to-cyan-400/10" : ""}`}
+              className={`bg-card border-border hover:scale-[1.02] transition-all duration-300 ${index === 0 ? "bg-gradient-to-r from-emerald-400/10 to-cyan-400/10" : ""}`}
             >
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -111,7 +228,7 @@ const MarketTrends = ({
           {articles.map((article, index) => (
             <Card
               key={index}
-              className={`backdrop-blur-xl bg-card/40 hover:bg-card/60 transition-all duration-300 border border-border/50 hover:scale-[1.02] shadow-lg ${index === 0 ? "bg-gradient-to-r from-emerald-400/10 to-cyan-400/10" : ""}`}
+              className={`bg-card border-border hover:scale-[1.02] transition-all duration-300 ${index === 0 ? "bg-gradient-to-r from-emerald-400/10 to-cyan-400/10" : ""}`}
             >
               <CardContent className="p-6">
                 <div className="mb-4">

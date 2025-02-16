@@ -2,7 +2,13 @@ import React from "react";
 import HeroSection from "./HeroSection";
 import { useAuth } from "../lib/auth";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { Newspaper, LineChart, Building2, Globe2 } from "lucide-react";
+import {
+  Newspaper,
+  LineChart,
+  Building2,
+  Globe2,
+  AlertTriangle,
+} from "lucide-react";
 import { Layout } from "./Layout";
 import { PageTransition } from "./ui/page-transition";
 import {
@@ -11,64 +17,46 @@ import {
   getLatestMarketInsights,
   storeMarketInsights,
 } from "../lib/market-insights";
-import {
-  getOverseasCompanyProperties,
-  getUKCompanyProperties,
-} from "../lib/land-registry";
 
 export default function MarketInsightsPage() {
   const { user: _, profile: __ } = useAuth();
   const [news, setNews] = React.useState<any[]>([]);
   const [insights, setInsights] = React.useState<string>("");
   const [loading, setLoading] = React.useState(true);
-  const [ukProperties, setUkProperties] = React.useState<any[]>([]);
-  const [overseasProperties, setOverseasProperties] = React.useState<any[]>([]);
 
   React.useEffect(() => {
     const loadData = async () => {
-      const [_, __, ukData, overseasData] = await Promise.all([
-        fetchPropertyNews(),
-        getLatestMarketInsights(),
-        getUKCompanyProperties(),
-        getOverseasCompanyProperties(),
-      ]);
-
-      setUkProperties(ukData);
-      setOverseasProperties(overseasData);
       try {
+        const prompt = `Analyze the current UK property regulatory landscape and provide insights on:
+
+1. Latest Tax Law Changes
+- Recent changes to property-related taxes
+- Impact on investors and landlords
+- Upcoming tax proposals
+
+2. Landlord Regulations
+- Current licensing requirements
+- Tenant rights updates
+- Property safety regulations
+
+3. Government Policies
+- Recent policy changes affecting property
+- Proposed legislation
+- Regional variations
+
+4. Market Impact Analysis
+- How these changes affect property values
+- Impact on rental yields
+- Investment strategy adjustments
+
+Provide specific dates, numbers, and practical implications where possible.`;
+
         const [newsData, latestInsights] = await Promise.all([
           fetchPropertyNews(),
           getLatestMarketInsights(),
         ]);
 
         setNews(newsData.slice(0, 8));
-
-        const prompt = `Analyze the current UK property market with the following structure:
-
-1. Executive Summary
-- Current market state
-- Key trends and changes
-
-2. Interest Rates & Mortgages
-- Current rates and recent changes
-- Impact on buyers and market
-
-3. Regional Price Analysis
-- London market performance
-- Regional variations and hotspots
-- Price growth rates
-
-4. Market Sentiment
-- Buyer confidence
-- Seller behavior
-- Industry expert opinions
-
-5. Investment Opportunities
-- High-yield areas
-- Emerging markets
-- Risk assessment
-
-Provide specific data points, percentages, and recent statistics where possible.`;
 
         try {
           if (
@@ -102,8 +90,8 @@ Provide specific data points, percentages, and recent statistics where possible.
     <PageTransition>
       <Layout>
         <HeroSection
-          title="Market Insights & Analysis"
-          subtitle="Stay informed with comprehensive market analysis and expert insights"
+          title="Regulatory Updates & Market Insights"
+          subtitle="Stay informed about the latest property regulations and policy changes"
           backgroundImage="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?ixlib=rb-4.0.3"
           showSearch={false}
           showStats={false}
@@ -111,59 +99,20 @@ Provide specific data points, percentages, and recent statistics where possible.
         />
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-7xl mx-auto space-y-8">
-            <div className="max-w-4xl mx-auto mb-16 prose dark:prose-invert">
-              <h2 className="text-3xl font-bold mb-6">
-                Expert Property Market Insights
-              </h2>
-              <p>
-                Access in-depth analysis and expert insights into the UK
-                property market. Our comprehensive market insights help
-                investors understand market dynamics, identify trends, and make
-                informed investment decisions.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">
-                Market Analysis
-              </h3>
-              <p>
-                Our expert analysts provide detailed market analysis covering
-                key aspects of the UK property market, including price trends,
-                rental yields, and market forecasts. Stay informed about market
-                movements and their implications for property investment.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">
-                Investment Strategy
-              </h3>
-              <p>
-                Develop effective investment strategies based on expert insights
-                and market analysis. Our platform provides guidance on portfolio
-                diversification, risk management, and opportunity identification
-                in the property market.
-              </p>
-
-              <h3 className="text-2xl font-semibold mt-8 mb-4">
-                Economic Impact
-              </h3>
-              <p>
-                Understand how broader economic factors affect the property
-                market. Our insights cover interest rates, inflation, policy
-                changes, and their impact on property investment decisions.
-              </p>
-            </div>
-            <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold mb-4">Market Insights</h1>
-              <p className="text-muted-foreground max-w-2xl mx-auto">
-                Stay informed with the latest property market analysis and news
-              </p>
-            </div>
-
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2">
                 <Card>
                   <CardHeader className="flex flex-row items-center gap-2">
-                    <LineChart className="w-5 h-5" />
-                    <h2 className="text-2xl font-semibold">Market Analysis</h2>
+                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-2xl font-semibold">
+                        Regulatory Updates
+                      </h2>
+                      <span className="relative flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                    </div>
                   </CardHeader>
                   <CardContent>
                     {loading ? (
@@ -174,9 +123,40 @@ Provide specific data points, percentages, and recent statistics where possible.
                       </div>
                     ) : (
                       <div className="prose dark:prose-invert max-w-none">
-                        {insights.split("\n").map((paragraph, index) => (
-                          <p key={index}>{paragraph}</p>
-                        ))}
+                        {insights.split("\n").map((line, index) => {
+                          if (line.startsWith("## ")) {
+                            return (
+                              <h2
+                                key={index}
+                                className="text-xl font-semibold mt-6 mb-3"
+                              >
+                                {line.replace("## ", "")}
+                              </h2>
+                            );
+                          } else if (line.startsWith("### ")) {
+                            return (
+                              <h3
+                                key={index}
+                                className="text-lg font-medium mt-4 mb-2"
+                              >
+                                {line.replace("### ", "")}
+                              </h3>
+                            );
+                          } else if (line.startsWith("- ")) {
+                            return (
+                              <li key={index} className="ml-4">
+                                {line.replace("- ", "")}
+                              </li>
+                            );
+                          } else if (line.trim() !== "") {
+                            return (
+                              <p key={index} className="mb-3">
+                                {line}
+                              </p>
+                            );
+                          }
+                          return null;
+                        })}
                       </div>
                     )}
                   </CardContent>
@@ -187,7 +167,7 @@ Provide specific data points, percentages, and recent statistics where possible.
                 <Card>
                   <CardHeader className="flex flex-row items-center gap-2">
                     <Newspaper className="w-5 h-5" />
-                    <h2 className="text-xl font-semibold">Latest News</h2>
+                    <h2 className="text-xl font-semibold">Latest Updates</h2>
                   </CardHeader>
                   <CardContent>
                     {loading ? (
@@ -226,92 +206,6 @@ Provide specific data points, percentages, and recent statistics where possible.
                   </CardContent>
                 </Card>
               </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
-              <Card>
-                <CardHeader className="flex flex-row items-center gap-2">
-                  <Building2 className="w-5 h-5" />
-                  <h2 className="text-xl font-semibold">
-                    UK Company Properties
-                  </h2>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="animate-pulse space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="space-y-2">
-                          <div className="h-4 bg-muted rounded w-3/4" />
-                          <div className="h-3 bg-muted rounded w-1/2" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {ukProperties.slice(0, 5).map((property, index) => (
-                        <div
-                          key={index}
-                          className="border-b last:border-0 pb-4 last:pb-0"
-                        >
-                          <h3 className="font-medium mb-1">
-                            {property.company_name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {property.property_address}
-                          </p>
-                          {property.price_paid && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Price: £{property.price_paid.toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="flex flex-row items-center gap-2">
-                  <Globe2 className="w-5 h-5" />
-                  <h2 className="text-xl font-semibold">
-                    Overseas Company Properties
-                  </h2>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="animate-pulse space-y-4">
-                      {[1, 2, 3].map((i) => (
-                        <div key={i} className="space-y-2">
-                          <div className="h-4 bg-muted rounded w-3/4" />
-                          <div className="h-3 bg-muted rounded w-1/2" />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {overseasProperties.slice(0, 5).map((property, index) => (
-                        <div
-                          key={index}
-                          className="border-b last:border-0 pb-4 last:pb-0"
-                        >
-                          <h3 className="font-medium mb-1">
-                            {property.company_name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground">
-                            {property.property_address}
-                          </p>
-                          {property.price_paid && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Price: £{property.price_paid.toLocaleString()}
-                            </p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
             </div>
           </div>
         </main>

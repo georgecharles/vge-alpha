@@ -27,18 +27,113 @@ const Home = () => {
   const loadFeaturedProperties = async () => {
     setIsSearching(true);
     try {
-      const results = await getFeaturedProperties();
-      setSearchResults(
-        results.map((p) => ({
-          id: p.id,
-          address: `${p.address}, ${p.city}, ${p.postcode}`,
-          price: p.price,
-          squareFootage: p.square_footage,
-          isPremium: p.is_premium,
-          assigned_user: p.assigned_user,
-          author: p.author,
-        })),
-      );
+      // Mock featured properties
+      const mockProperties = [
+        {
+          id: "1",
+          address: "123 Mayfair Gardens, London, W1K 1AA",
+          price: 1250000,
+          squareFootage: 1850,
+          bedrooms: 3,
+          bathrooms: 2,
+          isPremium: true,
+          images: [
+            "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+          ],
+          author: {
+            id: "1",
+            full_name: "Sarah Johnson",
+            email: "sarah@myvge.co.uk",
+          },
+        },
+        {
+          id: "2",
+          address: "45 Kensington Park Road, London, W11 3BQ",
+          price: 2450000,
+          squareFootage: 2400,
+          bedrooms: 4,
+          bathrooms: 3,
+          isPremium: true,
+          images: [
+            "https://images.unsplash.com/photo-1600047509807-ba8f99d2cdde?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+          ],
+          author: {
+            id: "2",
+            full_name: "James Wilson",
+            email: "james@myvge.co.uk",
+          },
+        },
+        {
+          id: "3",
+          address: "88 Notting Hill Gate, London, W11 3HT",
+          price: 1850000,
+          squareFootage: 1950,
+          bedrooms: 3,
+          bathrooms: 2,
+          isPremium: false,
+          images: [
+            "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+          ],
+          author: {
+            id: "3",
+            full_name: "Emma Davis",
+            email: "emma@myvge.co.uk",
+          },
+        },
+        {
+          id: "4",
+          address: "15 Chelsea Manor Street, London, SW3 5RP",
+          price: 3250000,
+          squareFootage: 2800,
+          bedrooms: 5,
+          bathrooms: 4,
+          isPremium: true,
+          images: [
+            "https://images.unsplash.com/photo-1600566753376-12c8ab7fb75b?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+          ],
+          author: {
+            id: "4",
+            full_name: "Michael Smith",
+            email: "michael@myvge.co.uk",
+          },
+        },
+        {
+          id: "5",
+          address: "92 Eaton Square, London, SW1W 9AN",
+          price: 4750000,
+          squareFootage: 3200,
+          bedrooms: 6,
+          bathrooms: 5,
+          isPremium: true,
+          images: [
+            "https://images.unsplash.com/photo-1600585154526-990dced4db0d?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+          ],
+          author: {
+            id: "5",
+            full_name: "Lisa Brown",
+            email: "lisa@myvge.co.uk",
+          },
+        },
+        {
+          id: "6",
+          address: "33 Belgrave Square, London, SW1X 8PB",
+          price: 5500000,
+          squareFootage: 3500,
+          bedrooms: 7,
+          bathrooms: 6,
+          isPremium: true,
+          images: [
+            "https://images.unsplash.com/photo-1600573472592-401b489a3cdc?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+          ],
+          author: {
+            id: "6",
+            full_name: "David Thompson",
+            email: "david@myvge.co.uk",
+          },
+        },
+      ];
+
+      setSearchResults(mockProperties);
     } catch (error) {
       console.error("Error loading featured properties:", error);
     } finally {

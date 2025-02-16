@@ -1,13 +1,14 @@
 import React from "react";
+import Header from "./Header";
+import HeroSection from "./HeroSection";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Button } from "./ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Calculator, Home, Building, Percent, TrendingUp } from "lucide-react";
-import Header from "./Header";
 import { useAuth } from "../lib/auth";
-import HeroSection from "./HeroSection";
+import { Footer } from "./Footer";
 
 export default function InvestmentCalculator() {
   const { user, profile } = useAuth();

@@ -28,19 +28,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function fetchProfile(userId: string) {
     try {
-      const { data, error } = await supabase
+      const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select("*")
         .eq("id", userId)
         .single();
 
-      if (error) {
-        console.error("Error fetching profile:", error);
+      if (profileError) {
+        console.error("Error fetching profile:", profileError);
         setProfile(null);
         return;
       }
 
-      setProfile(data);
+      // Force refresh profile from database
+      const { data: refreshedProfile, error: refreshError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+
+      if (refreshError) {
+        console.error("Error refreshing profile:", refreshError);
+        setProfile(profile); // Fall back to initial profile
+        return;
+      }
+
+      setProfile(refreshedProfile);
     } catch (error) {
       console.error("Error fetching profile:", error);
       setProfile(null);
@@ -48,21 +61,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
+    const initAuth = async () => {
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        if (session?.user) {
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        }
+      } catch (error) {
+        console.error("Error initializing auth:", error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
-    });
+    };
+
+    initAuth();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
-      } else {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        if (session?.user) {
+          setUser(session.user);
+          await fetchProfile(session.user.id);
+        }
+      } else if (event === "SIGNED_OUT") {
         setUser(null);
         setProfile(null);
       }

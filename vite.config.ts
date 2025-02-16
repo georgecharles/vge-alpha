@@ -1,6 +1,6 @@
-import path from "path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
+import path from "path";
 import { tempo } from "tempo-devtools/dist/vite";
 
 const conditionalPlugins: [string, Record<string, any>][] = [];
@@ -18,7 +18,8 @@ export default defineConfig({
       : process.env.VITE_BASE_PATH || "/",
   optimizeDeps: {
     entries: ["src/main.tsx", "src/tempobook/**/*"],
-    include: ["react", "react-dom"],
+    include: ["react", "react-dom", "react/jsx-runtime"],
+    force: true,
   },
   plugins: [
     react({

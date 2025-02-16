@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { PasswordProtect } from "./components/PasswordProtect";
 import { Loading } from "./components/ui/loading";
 import { AnimatePresence, motion } from "framer-motion";
@@ -45,7 +45,7 @@ function AppContent() {
   }, [location.pathname]);
 
   useEffect(() => {
-    document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("dark");
   }, []);
 
   return (

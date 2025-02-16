@@ -5,8 +5,8 @@ module.exports = {
   prefix: "",
   theme: {
     fontFamily: {
-      sans: ["DM Sans", "sans-serif"],
-      serif: ["DM Sans", "sans-serif"],
+      sans: ["Playfair Display", "serif"],
+      serif: ["Playfair Display", "serif"],
     },
     container: {
       center: true,

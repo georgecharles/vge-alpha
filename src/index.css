@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600;9..40,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -17,33 +17,33 @@
 
 @layer base {
   :root {
-    --background: 220 25% 98%;
-    --foreground: 220 25% 10%;
+    --background: 0 0% 100%;
+    --foreground: 173 58% 20%;
 
     --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
+    --card-foreground: 173 58% 20%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
+    --popover-foreground: 173 58% 20%;
 
-    --primary: 167 70% 40%;
-    --primary-foreground: 167 70% 98%;
+    --primary: 173 58% 39%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 220 25% 95%;
-    --secondary-foreground: 220 25% 10%;
+    --secondary: 173 58% 95%;
+    --secondary-foreground: 173 58% 20%;
 
-    --muted: 220 25% 95%;
-    --muted-foreground: 220 25% 40%;
+    --muted: 173 58% 95%;
+    --muted-foreground: 173 58% 40%;
 
-    --accent: 167 70% 95%;
-    --accent-foreground: 167 70% 40%;
+    --accent: 173 58% 90%;
+    --accent-foreground: 173 58% 30%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 220 25% 90%;
-    --input: 220 25% 90%;
-    --ring: 167 70% 40%;
+    --border: 173 58% 90%;
+    --input: 173 58% 90%;
+    --ring: 173 58% 39%;
 
     --radius: 0.75rem;
 

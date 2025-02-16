@@ -8,7 +8,7 @@ import { ArrowRight, Calendar, Clock, Tag } from "lucide-react";
 import { PageTransition } from "./ui/page-transition";
 
 export default function BlogPage() {
-  const { user, profile } = useAuth();
+  const { user: _, profile: __ } = useAuth();
 
   const blogPosts = [
     {

@@ -14,7 +14,7 @@ export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [savedProperties, setSavedProperties] = React.useState([]);
-  const [addedProperties, setAddedProperties] = React.useState([]);
+  const [addedProperties, setAddedProperties] = React.useState<any[]>([]);
   const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] =
     React.useState(false);
   const [portfolioStats, setPortfolioStats] = React.useState({

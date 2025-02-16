@@ -1,6 +1,4 @@
 import React from "react";
-import Header from "./Header";
-import { useAuth } from "../lib/auth";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
 import { PageTransition } from "./ui/page-transition";
@@ -15,8 +13,6 @@ import {
 } from "lucide-react";
 
 export default function HelpSupportPage() {
-  const { user, profile } = useAuth();
-
   const supportCategories = [
     {
       title: "Getting Started",
@@ -79,9 +75,6 @@ export default function HelpSupportPage() {
       onClick: () => alert("Live chat feature coming soon!"),
     },
   ];
-
-  const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
-  const [authMode, setAuthMode] = React.useState<"signin" | "signup">("signin");
 
   return (
     <PageTransition>

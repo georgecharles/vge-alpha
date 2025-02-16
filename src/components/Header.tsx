@@ -37,8 +37,15 @@ interface HeaderProps {
   onSignIn?: () => void;
   onSignUp?: () => void;
   userProfile?: {
-    full_name?: string;
-    email?: string;
+    full_name?: string | null;
+    email?: string | null;
+    created_at?: string;
+    id?: string;
+    role?: "user" | "admin" | "moderator" | null;
+    stripe_customer_id?: string | null;
+    subscription_status?: string | null;
+    subscription_tier?: "free" | "basic" | "pro" | "premium" | null;
+    updated_at?: string;
   };
 }
 

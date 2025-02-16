@@ -8,7 +8,7 @@ import { Layout } from "./Layout";
 import { PageTransition } from "./ui/page-transition";
 
 export default function MarketTrendsPage() {
-  const { user, profile } = useAuth();
+  const { user: _, profile: __ } = useAuth();
   const [loading, setLoading] = React.useState(true);
 
   const trends = [

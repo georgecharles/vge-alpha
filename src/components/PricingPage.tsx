@@ -9,7 +9,7 @@ import { LegalDisclaimer } from "./LegalDisclaimer";
 import { Footer } from "./Footer";
 
 export default function PricingPage() {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const { toast } = useToast();
 
   const handleSubscribe = async (priceId: string) => {

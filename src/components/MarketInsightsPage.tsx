@@ -17,7 +17,7 @@ import {
 } from "../lib/land-registry";
 
 export default function MarketInsightsPage() {
-  const { user, profile } = useAuth();
+  const { user: _, profile: __ } = useAuth();
   const [news, setNews] = React.useState<any[]>([]);
   const [insights, setInsights] = React.useState<string>("");
   const [loading, setLoading] = React.useState(true);
@@ -26,13 +26,12 @@ export default function MarketInsightsPage() {
 
   React.useEffect(() => {
     const loadData = async () => {
-      const [newsData, latestInsights, ukData, overseasData] =
-        await Promise.all([
-          fetchPropertyNews(),
-          getLatestMarketInsights(),
-          getUKCompanyProperties(),
-          getOverseasCompanyProperties(),
-        ]);
+      const [_, __, ukData, overseasData] = await Promise.all([
+        fetchPropertyNews(),
+        getLatestMarketInsights(),
+        getUKCompanyProperties(),
+        getOverseasCompanyProperties(),
+      ]);
 
       setUkProperties(ukData);
       setOverseasProperties(overseasData);

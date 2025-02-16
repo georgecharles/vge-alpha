@@ -12,5 +12,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     persistSession: true,
     storageKey: "my-vge-auth",
     storage: window.localStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
   },
 });

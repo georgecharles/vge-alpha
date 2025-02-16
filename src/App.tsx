@@ -29,6 +29,7 @@ import BlogPage from "./components/BlogPage";
 import InvestmentCalculator from "./components/InvestmentCalculator";
 import HelpSupportPage from "./components/HelpSupportPage";
 import { ChatBot } from "./components/ChatBot";
+import AuthCallback from "./components/AuthCallback";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -96,6 +97,7 @@ function AppContent() {
             <Route path="/blog/:slug" element={<ArticlePage />} />
             <Route path="/calculators" element={<InvestmentCalculator />} />
             <Route path="/help" element={<HelpSupportPage />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             {import.meta.env.VITE_TEMPO === "true" && (
               <Route path="/tempobook/*" />
             )}

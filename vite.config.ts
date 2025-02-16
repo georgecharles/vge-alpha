@@ -43,5 +43,18 @@ export default defineConfig({
   build: {
     outDir: "dist",
     copyPublicDir: true,
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes("node_modules")) {
+            return "vendor";
+          }
+        },
+      },
+    },
+  },
+  define: {
+    "process.env": {},
   },
 });

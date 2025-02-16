@@ -28,7 +28,7 @@ export function MobileNav({ isOpen, onClose, children }) {
             <div className="flex h-16 items-center justify-between px-6 pt-4">
               <a href="/" className="hover:opacity-80 transition-opacity">
                 <img
-                  src="https://i.postimg.cc/1zhYWbNc/my-1-1.png"
+                  src="https://i.postimg.cc/GpdY6N74/my-1920-x-1080-px-1.png"
                   alt="MyVGE"
                   className="h-8"
                 />

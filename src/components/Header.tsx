@@ -104,7 +104,7 @@ const Header = ({
             <div className="flex items-center gap-2">
               <a href="/" className="hover:opacity-80 transition-opacity">
                 <img
-                  src="https://i.postimg.cc/1zhYWbNc/my-1-1.png"
+                  src="https://i.postimg.cc/GpdY6N74/my-1920-x-1080-px-1.png"
                   alt="MyVGE"
                   className="h-8"
                 />

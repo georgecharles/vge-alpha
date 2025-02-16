@@ -13,7 +13,7 @@ import { Layout } from "./Layout";
 export default function Dashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [savedProperties, setSavedProperties] = React.useState([]);
+  const [savedProperties, setSavedProperties] = React.useState<any[]>([]);
   const [addedProperties, setAddedProperties] = React.useState<any[]>([]);
   const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] =
     React.useState(false);

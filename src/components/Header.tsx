@@ -36,6 +36,7 @@ interface HeaderProps {
   isAuthenticated?: boolean;
   onSignIn?: () => void;
   onSignUp?: () => void;
+  onSignOut?: () => Promise<void>;
   userProfile?: {
     full_name?: string | null;
     email?: string | null;

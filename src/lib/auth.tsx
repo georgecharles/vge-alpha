@@ -87,14 +87,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             first_name: firstName,
             last_name: lastName,
           },
+          emailRedirectTo: "https://myvge.com/auth/callback",
         },
       });
 
       if (error) throw error;
 
       if (data.user) {
-        // Use the service role client for the initial profile creation
-        const serviceClient = supabase.auth.admin;
+        // Create the profile
         const { error: profileError } = await supabase.from("profiles").insert([
           {
             id: data.user.id,
@@ -112,10 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (profileError) {
           console.error("Profile creation error:", profileError);
-          // Don't throw the error since the user was created successfully
-          // Just log it and continue
-          console.error(profileError);
+          throw new Error(
+            "Failed to create user profile. Please contact support.",
+          );
         }
+
+        return { user: data.user, session: data.session };
       }
     } catch (error) {
       console.error("Sign up error:", error);
@@ -130,7 +132,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Sign in error details:", error);
+        if (error.message.includes("Email not confirmed")) {
+          throw new Error(
+            "Please confirm your email address before signing in.",
+          );
+        }
+        throw error;
+      }
+
+      // After successful sign in, fetch the profile
+      if (data.user) {
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", data.user.id)
+          .single();
+
+        if (profileError) {
+          console.error("Error fetching profile:", profileError);
+        }
+      }
+
       return data.user;
     } catch (error) {
       console.error("Sign in error:", error);

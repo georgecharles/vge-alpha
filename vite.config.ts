@@ -40,4 +40,8 @@ export default defineConfig({
       strict: false,
     },
   },
+  build: {
+    outDir: "dist",
+    copyPublicDir: true,
+  },
 });

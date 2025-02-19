@@ -100,7 +100,7 @@ const MarketTrends = ({
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-3 mb-8">
+              <TabsList className="grid w-full grid-cols-3 mb-8 overflow-x-auto snap-start snap-mandatory">
                 <TabsTrigger value="overview">Price Evolution</TabsTrigger>
                 <TabsTrigger value="regional">Regional Comparison</TabsTrigger>
                 <TabsTrigger value="heatmap">Growth Heatmap</TabsTrigger>

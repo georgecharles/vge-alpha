@@ -13,14 +13,36 @@ interface FeaturedPropertiesProps {
   isLoading?: boolean;
 }
 
+export async function getFeaturedDeals(): Promise<Property[]> {
+  const { data, error } = await supabase
+    .from("deals", { schema: 'public' })
+    .select(
+      `
+      *,
+      assigned_user:profiles!deals_assigned_user_id_fkey(id, full_name, email),
+      author:profiles!deals_created_by_fkey(id, full_name, email)
+    `,
+    )
+    .order("created_at", { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error("Error fetching featured deals:", error);
+    throw error;
+  }
+
+  return data as Property[];
+}
+
 const FeaturedProperties = ({
   results,
   isSubscriber = false,
-  isLoading = false,
+  isLoading: isLoadingProp = false, // rename prop to avoid conflict
 }: FeaturedPropertiesProps = {}) => {
   const { user, profile } = useAuth();
   const [properties, setProperties] = React.useState<any[]>([]);
   const [selectedProperty, setSelectedProperty] = React.useState<any>(null);
+  const [isLoading, setIsLoading] = React.useState(isLoadingProp); // use local state
 
   const handleMessageAuthor = (authorId: string) => {
     // Open the chat with the selected author
@@ -31,95 +53,20 @@ const FeaturedProperties = ({
   };
 
   React.useEffect(() => {
-    if (results) {
-      setProperties(results);
-    } else {
-      // Mock data for deals
-      const mockDeals = [
-        {
-          id: "1",
-          title: "High-Yield Student Housing Investment",
-          deal_price: 450000,
-          original_price: 500000,
-          potential_profit: 150000,
-          roi_percentage: 33.3,
-          author: {
-            id: "1",
-            full_name: "Sarah Johnson",
-            email: "sarah@example.com",
-          },
-          images: [
-            "https://images.unsplash.com/photo-1497366754035-f200968a6e72",
-          ],
-        },
-        {
-          id: "2",
-          title: "Commercial Property Development Opportunity",
-          deal_price: 850000,
-          original_price: 950000,
-          potential_profit: 300000,
-          roi_percentage: 35.3,
-          author: {
-            id: "2",
-            full_name: "Michael Smith",
-            email: "michael@example.com",
-          },
-          images: [
-            "https://images.unsplash.com/photo-1497366811353-6870744d04b2",
-          ],
-        },
-        {
-          id: "3",
-          title: "City Center Apartment Block",
-          deal_price: 1200000,
-          original_price: 1400000,
-          potential_profit: 400000,
-          roi_percentage: 33.3,
-          author: {
-            id: "3",
-            full_name: "Emma Davis",
-            email: "emma@example.com",
-          },
-          images: [
-            "https://images.unsplash.com/photo-1464938050520-ef2270bb8ce8",
-          ],
-        },
-        {
-          id: "4",
-          title: "Mixed-Use Development Site",
-          deal_price: 2500000,
-          original_price: 2800000,
-          potential_profit: 900000,
-          roi_percentage: 36,
-          author: {
-            id: "4",
-            full_name: "James Wilson",
-            email: "james@example.com",
-          },
-          images: [
-            "https://images.unsplash.com/photo-1497366216548-37526070297c",
-          ],
-        },
-        {
-          id: "5",
-          title: "Retail Park Investment",
-          deal_price: 3500000,
-          original_price: 4000000,
-          potential_profit: 1200000,
-          roi_percentage: 34.3,
-          author: {
-            id: "5",
-            full_name: "Lisa Brown",
-            email: "lisa@example.com",
-          },
-          images: [
-            "https://images.unsplash.com/photo-1497366858526-0766cadbe8fa",
-          ],
-        },
-      ];
-      setProperties(mockDeals);
-    }
-  }, [results]);
+    const loadDeals = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getFeaturedDeals();
+        setProperties(data);
+      } catch (error) {
+        console.error("Error loading featured deals:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadDeals();
+  }, []);
 
   return (
     <PageTransition>

@@ -32,7 +32,7 @@ export function AuthModal({
   }, [defaultMode]);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [showConfirmation, setShowConfirmation] = React.useState(false);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, signInWithGoogle } = useAuth();
   const { toast } = useToast();
 
   const [formData, setFormData] = React.useState({
@@ -215,6 +215,10 @@ export function AuthModal({
                 : mode === "signin"
                   ? "Sign In"
                   : "Create Account"}
+            </Button>
+
+            <Button type="button" variant="link" onClick={() => signInWithGoogle()} disabled={isSubmitting}>
+              Sign In with Google
             </Button>
 
             <Button

@@ -2,6 +2,7 @@ import React from "react";
 import HeroSection from "./HeroSection";
 import { useAuth } from "../lib/auth";
 import { Card, CardContent, CardHeader } from "./ui/card";
+import { Button } from "./ui/button";
 import {
   Newspaper,
   LineChart,
@@ -23,6 +24,7 @@ export default function MarketInsightsPage() {
   const [news, setNews] = React.useState<any[]>([]);
   const [insights, setInsights] = React.useState<string>("");
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const loadData = async () => {
@@ -192,12 +194,18 @@ Provide specific dates, numbers, and practical implications where possible.`;
                             <p className="text-sm text-muted-foreground mb-2">
                               {article.description}
                             </p>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="flex justify-between items-center text-xs text-muted-foreground">
                               <span>
                                 {new Date(
                                   article.publishedAt,
                                 ).toLocaleDateString()}
                               </span>
+                              <Button
+                                variant="ghost"
+                                className="group hover:text-primary"
+                              >
+                                Read More
+                              </Button>
                             </div>
                           </div>
                         ))}

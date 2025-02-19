@@ -5,8 +5,8 @@ module.exports = {
   prefix: "",
   theme: {
     fontFamily: {
-      sans: ["Playfair Display", "serif"],
-      serif: ["Playfair Display", "serif"],
+      sans: ["Atkinson Hyperlegible", "sans-serif"],
+      serif: ["Atkinson Hyperlegible", "serif"],
     },
     container: {
       center: true,
@@ -113,20 +113,12 @@ module.exports = {
           },
         },
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {

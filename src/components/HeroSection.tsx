@@ -36,38 +36,15 @@ const HeroSection = ({
         className="absolute inset-0 bg-cover bg-center scale-105 animate-ken-burns"
         style={{ backgroundImage: `url(${backgroundImage})` }}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-black/80 via-black/50 to-black/80 backdrop-blur-sm" />
-      </div>
-      {/* Animated Particles */}
-      <div className="absolute inset-0 opacity-30">
-        <div
-          className="absolute w-2 h-2 bg-primary rounded-full animate-float-slow"
-          style={{ left: "10%", top: "20%" }}
-        />
-        <div
-          className="absolute w-2 h-2 bg-primary rounded-full animate-float-slower"
-          style={{ left: "20%", top: "60%" }}
-        />
-        <div
-          className="absolute w-2 h-2 bg-primary rounded-full animate-float"
-          style={{ left: "80%", top: "30%" }}
-        />
-        <div
-          className="absolute w-2 h-2 bg-primary rounded-full animate-float-slow"
-          style={{ left: "70%", top: "70%" }}
-        />
-        <div
-          className="absolute w-2 h-2 bg-primary rounded-full animate-float-slower"
-          style={{ left: "40%", top: "40%" }}
-        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/60 backdrop-blur-sm" />
       </div>
 
       {/* Content */}
       <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center py-16 pt-24 animate-fade-in-up">
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2 sm:mb-4">
+        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 sm:mb-6">
           {title}
         </h1>
-        <p className="text-base sm:text-lg text-gray-200 mb-4 sm:mb-6 max-w-2xl mx-auto">
+        <p className="text-lg sm:text-xl text-gray-200 mb-6 sm:mb-8 max-w-3xl mx-auto">
           {subtitle}
         </p>
 
@@ -83,7 +60,7 @@ const HeroSection = ({
                 placeholder="Enter an address, neighbourhood, city, or postcode"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-10 sm:h-12 pl-4 pr-12 text-base sm:text-lg bg-white text-black border-2 border-transparent focus:border-primary"
+                className="w-full h-12 sm:h-14 pl-5 pr-14 text-base sm:text-lg bg-white text-black border-2 border-transparent focus:border-primary"
               />
               <Button
                 type="submit"
@@ -91,34 +68,10 @@ const HeroSection = ({
                 variant="ghost"
                 className="absolute right-2 top-1/2 -translate-y-1/2 hover:bg-transparent"
               >
-                <Search className="w-5 h-5 text-gray-500 hover:text-primary transition-colors" />
+                <Search className="w-6 h-6 text-gray-500 hover:text-primary transition-colors" />
               </Button>
             </div>
           </form>
-        )}
-
-        {/* Optional: Quick stats or features */}
-        {showStats && (
-          <div className="mt-12 grid grid-cols-3 gap-4 sm:gap-8 text-white max-w-2xl mx-auto">
-            <div className="text-center">
-              <div className="text-lg sm:text-2xl font-bold">1M+</div>
-              <div className="text-xs sm:text-sm text-gray-300">
-                Properties Listed
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg sm:text-2xl font-bold">50K+</div>
-              <div className="text-xs sm:text-sm text-gray-300">
-                Happy Customers
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg sm:text-2xl font-bold">100+</div>
-              <div className="text-xs sm:text-sm text-gray-300">
-                Cities Covered
-              </div>
-            </div>
-          </div>
         )}
       </div>
     </div>

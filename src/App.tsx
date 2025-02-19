@@ -90,7 +90,7 @@ function AppContent() {
               }
             />
             <Route path="/insights" element={<MarketInsightsPage />} />
-            <Route path="/trends" element={<MarketTrendsPage />} />
+            <Route path="/trends" element={<AuthProvider><MarketTrendsPage /></AuthProvider>} />
             <Route path="/research" element={<ResearchPage />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/article/:title" element={<ArticlePage />} />

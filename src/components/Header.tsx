@@ -58,11 +58,13 @@ const Header = ({
 }: HeaderProps) => {
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, profile, signOut } = useAuth();
 
   const handleSignOut = async () => {
+    console.log("Sign out button clicked"); // Add this line
     try {
       await signOut();
+      navigate("/");
     } catch (error) {
       console.error("Error signing out:", error);
     }

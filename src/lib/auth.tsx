@@ -16,6 +16,7 @@ interface AuthContextType {
     firstName: string,
     lastName: string,
   ) => Promise<void>;
+  signInWithGoogle: () => Promise<void>; // Google Sign-in
   signOut: () => Promise<void>;
 }
 
@@ -40,6 +41,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      console.log("Fetched profile:", profile); // Add this line
+
       // Force refresh profile from database
       const { data: refreshedProfile, error: refreshError } = await supabase
         .from("profiles")
@@ -52,6 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setProfile(profile); // Fall back to initial profile
         return;
       }
+
+      console.log("Refreshed profile:", refreshedProfile); // Add this line
 
       setProfile(refreshedProfile);
     } catch (error) {
@@ -179,6 +184,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function signInWithGoogle() {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: 'https://myvge.com/auth/callback',
+        }
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      throw error;
+    }
+  }
+
   async function signOut() {
     try {
       const { error } = await supabase.auth.signOut();
@@ -198,6 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     signIn,
     signUp,
+    signInWithGoogle, // Add to context
     signOut,
   };
 

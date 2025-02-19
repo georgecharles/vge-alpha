@@ -7,6 +7,7 @@ export default function AuthCallback() {
 
   useEffect(() => {
     supabase.auth.onAuthStateChange((event, session) => {
+      console.log("Auth state change:", event, session); // Add this line
       if (event === "SIGNED_IN") {
         navigate("/dashboard");
       }
@@ -17,6 +18,7 @@ export default function AuthCallback() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
+      console.log("Initial session:", session); // Add this line
       if (session) {
         navigate("/dashboard");
       } else {

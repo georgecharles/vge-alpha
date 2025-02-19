@@ -205,6 +205,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       setUser(null);
       setProfile(null);
+      localStorage.removeItem("password-protected"); // Clear password protection
+      localStorage.removeItem("supabase.auth.token"); // Clear supabase token
+      localStorage.removeItem("supabase.auth.session"); // Clear supabase session
       window.location.href = "/";
     } catch (error) {
       console.error("Sign out error:", error);

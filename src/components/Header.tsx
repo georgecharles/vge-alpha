@@ -60,7 +60,6 @@ const Header = ({
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const navigate = useNavigate();
   const { user, profile, signOut } = useAuth();
-  const location = useLocation();
 
   const handleSignOut = async () => {
     console.log("Sign out button clicked"); // Add this line
@@ -100,11 +99,9 @@ const Header = ({
   });
   ListItem.displayName = "ListItem";
 
-  const isHomePage = location.pathname === "/";
-
   return (
     <>
-      <header className={`fixed top-0 left-0 right-0 z-50 px-4 py-2 ${isHomePage ? "" : "bg-background border-border/50 border shadow-lg"}`}>
+      <header className="fixed top-0 left-0 right-0 z-50 px-4 py-2 bg-background border-border/50 border shadow-lg">
         <div className="mx-auto max-w-[1400px] rounded-full backdrop-blur-md bg-background/80 border border-border/50 shadow-lg transition-all duration-300">
           <div className="container mx-auto h-14 px-6 flex items-center justify-between">
             <div className="flex items-center gap-2">

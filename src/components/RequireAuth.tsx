@@ -3,14 +3,24 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 
 export function RequireAuth({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+  const { user, profile, isLoading, fetchProfile } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      navigate("/");
-    }
-  }, [user, isLoading, navigate]);
+    const checkAuth = async () => {
+      if (!isLoading && !user) {
+        navigate("/");
+        return;
+      }
+
+      if (user && !profile) {
+        // Fetch profile if user is authenticated but profile is missing
+        await fetchProfile(user.id);
+      }
+    };
+
+    checkAuth();
+  }, [user, profile, isLoading, navigate, fetchProfile]);
 
   if (isLoading) {
     return (

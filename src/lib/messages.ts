@@ -19,6 +19,7 @@ export async function sendMessage(
   senderId: string,
   receiverId: string,
   content: string,
+  isSupport: boolean = false, // Add isSupport parameter
 ) {
   const filteredContent = filterProfanity(content);
 
@@ -29,6 +30,7 @@ export async function sendMessage(
         sender_id: senderId,
         receiver_id: receiverId,
         content: filteredContent,
+        is_support: isSupport, // Set is_support value
       },
     ])
     .select(

@@ -84,7 +84,7 @@ export function ChatBot() {
           `
           *,
           sender:profiles!messages_sender_id_fkey(id, full_name, email),
-          receiver:profiles!messages_receiver_id_fkey(full_name, email)
+          receiver:profiles!messages_receiver_id_fkey(id, full_name, email)
         `,
         )
         .or(`sender_id.eq.${user?.id},receiver_id.eq.${user?.id}`)
@@ -114,7 +114,7 @@ export function ChatBot() {
   };
 
   const handleSend = async (text: string) => {
-    console.log("handleSend called with text:", text); // Add this line
+    console.log("handleSend called with text:", text);
     if (!text.trim()) return;
 
     if (activeTab === "ai") {
@@ -126,6 +126,26 @@ export function ChatBot() {
       try {
         const response = await getChatResponse(text);
         setMessages((prev) => [...prev, { text: response, isUser: false }]);
+
+        // Store AI response in Supabase (sender_id will be null for AI)
+        const { error: aiError } = await supabase.from("messages").insert([
+          {
+            sender_id: user?.id,
+            receiver_id: user?.id, // or a specific support user ID
+            content: text,
+            is_support: false,
+          },
+          {
+            sender_id: null, // AI has no sender ID
+            receiver_id: user?.id,
+            content: response,
+            is_support: false,
+          },
+        ]);
+
+        if (aiError) {
+          console.error("Supabase insert error (AI):", aiError);
+        }
       } catch (error) {
         console.error("Error sending message:", error);
       } finally {

@@ -21,38 +21,66 @@ const handler: Handler = async (event) => {
       process.env.STRIPE_WEBHOOK_SECRET!,
     );
 
+    let userId: string | undefined;
+    let tier: string = "free"; // Default tier
+
     if (stripeEvent.type === "checkout.session.completed") {
       const session = stripeEvent.data.object as Stripe.Checkout.Session;
-      const userId = session.metadata?.userId;
+      userId = session.metadata?.userId;
 
-      if (userId) {
-        // Get subscription details
-        const subscription = await stripe.subscriptions.retrieve(
-          session.subscription as string,
-        );
+      // Get subscription details
+      const subscription = await stripe.subscriptions.retrieve(
+        session.subscription as string,
+      );
 
+      // Map Stripe price to subscription tier
+      const priceId = subscription.items.data[0].price.id;
+      if (priceId === "price_1QnikjCOhalwhG2QUgRtMAco") {
+        tier = "premium";
+      } else if (priceId === "price_1QnikPCOhalwhG2QVYfxwG5D") {
+        tier = "pro";
+      } else {
+        tier = "basic";
+      }
+    } else if (
+      stripeEvent.type === "customer.subscription.updated" ||
+      stripeEvent.type === "customer.subscription.deleted"
+    ) {
+      const subscription = stripeEvent.data.object as Stripe.Subscription;
+      userId = subscription.metadata?.userId;
+
+      if (stripeEvent.type === "customer.subscription.updated") {
         // Map Stripe price to subscription tier
         const priceId = subscription.items.data[0].price.id;
-        let tier = "basic";
         if (priceId === "price_1QnikjCOhalwhG2QUgRtMAco") {
           tier = "premium";
         } else if (priceId === "price_1QnikPCOhalwhG2QVYfxwG5D") {
           tier = "pro";
+        } else {
+          tier = "basic";
         }
-
-        // Update user's subscription in Supabase
-        const { error } = await supabase
-          .from("profiles")
-          .update({
-            subscription_tier: tier,
-            subscription_status: "active",
-            stripe_customer_id: session.customer as string,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", userId);
-
-        if (error) throw error;
+      } else if (stripeEvent.type === "customer.subscription.deleted") {
+        tier = "free"; // Downgrade to free tier
       }
+    }
+
+    if (userId) {
+      let subscriptionStatus = "active";
+      if (stripeEvent.type === "customer.subscription.deleted") {
+        subscriptionStatus = "cancelled";
+      }
+
+      // Update user's subscription in Supabase
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          subscription_tier: tier,
+          subscription_status: subscriptionStatus,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", userId);
+
+      if (error) throw error;
     }
 
     return {

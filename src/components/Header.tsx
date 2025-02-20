@@ -127,6 +127,9 @@ const Header = ({
                       <ListItem href="/insights" title="Market Insights">
                         Deep dive into property market analytics and forecasts.
                       </ListItem>
+                      <ListItem href="/research" title="Research & Reports">
+                        Access expert analysis and reports.
+                      </ListItem>
                     </ul>
                   </NavigationMenuContent>
                 </NavigationMenuItem>
@@ -141,13 +144,24 @@ const Header = ({
                 </NavigationMenuItem>
 
                 <NavigationMenuItem>
-                  <NavigationMenuLink
-                    className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
-                    href="/calculators"
-                  >
-                    Calculators
-                  </NavigationMenuLink>
+                  <NavigationMenuTrigger className="text-sm font-medium transition-colors hover:text-primary bg-transparent hover:bg-transparent">
+                    Services
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent>
+                    <ul className="grid w-[400px] gap-3 p-4 rounded-xl">
+                      <ListItem href="/property-management" title="Property Management">
+                        Let us take care of your property.
+                      </ListItem>
+                      <ListItem href="/investment-opportunities" title="Investment Opportunities">
+                        Discover tailored investment strategies.
+                      </ListItem>
+                      <ListItem href="/calculators" title="Calculators">
+                        Calculate different aspects of your property investment.
+                      </ListItem>
+                    </ul>
+                  </NavigationMenuContent>
                 </NavigationMenuItem>
+
                 <NavigationMenuItem>
                   <NavigationMenuLink
                     className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
@@ -162,6 +176,14 @@ const Header = ({
                     href="/help"
                   >
                     Help & Support
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+                <NavigationMenuItem>
+                  <NavigationMenuLink
+                    className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
+                    href="/about-us"
+                  >
+                    About Us
                   </NavigationMenuLink>
                 </NavigationMenuItem>
               </NavigationMenuList>
@@ -307,6 +329,24 @@ const Header = ({
             className="block text-lg font-medium hover:text-primary transition-colors"
           >
             Pricing
+          </a>
+          <a
+            href="/property-management"
+            className="block text-lg font-medium hover:text-primary transition-colors"
+          >
+            Property Management
+          </a>
+          <a
+            href="/investment-opportunities"
+            className="block text-lg font-medium hover:text-primary transition-colors"
+          >
+            Investment Opportunities
+          </a>
+          <a
+            href="/about-us"
+            className="block text-lg font-medium hover:text-primary transition-colors"
+          >
+            About Us
           </a>
           {!isAuthenticated ? (
             <div className="space-y-4 pt-6">

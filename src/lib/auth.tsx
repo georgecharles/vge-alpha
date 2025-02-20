@@ -16,7 +16,7 @@ interface AuthContextType {
     firstName: string,
     lastName: string,
   ) => Promise<void>;
-  signInWithGoogle: () => Promise<void>; // Google Sign-in
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -41,24 +41,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("Fetched profile:", profile); // Add this line
+      console.log("Fetched profile:", profile);
 
-      // Force refresh profile from database
-      const { data: refreshedProfile, error: refreshError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-
-      if (refreshError) {
-        console.error("Error refreshing profile:", refreshError);
-        setProfile(profile); // Fall back to initial profile
-        return;
-      }
-
-      console.log("Refreshed profile:", refreshedProfile); // Add this line
-
-      setProfile(refreshedProfile);
+      setProfile(profile);
     } catch (error) {
       console.error("Error fetching profile:", error);
       setProfile(null);
@@ -87,6 +72,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state change:", event, session); // Keep this for debugging
       if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
         if (session?.user) {
           setUser(session.user);
@@ -95,6 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } else if (event === "SIGNED_OUT") {
         setUser(null);
         setProfile(null);
+        localStorage.removeItem("password-protected"); // Clear password protection
+        localStorage.removeItem("supabase.auth.token"); // Clear supabase token
+        localStorage.removeItem("supabase.auth.session"); // Clear supabase session
+        window.location.href = "/"; // Use window.location.href for redirect
       }
       setIsLoading(false);
     });
@@ -166,15 +156,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // After successful sign in, fetch the profile
       if (data.user) {
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", data.user.id)
-          .single();
-
-        if (profileError) {
-          console.error("Error fetching profile:", profileError);
-        }
+        await fetchProfile(data.user.id); // Simplified
       }
 
       return data.user;
@@ -206,9 +188,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setProfile(null);
       localStorage.removeItem("password-protected"); // Clear password protection
-      localStorage.removeItem("supabase.auth.token"); // Clear supabase token
+      localStorage.removeItem("supabase.auth.token"); // Clear supabase session
       localStorage.removeItem("supabase.auth.session"); // Clear supabase session
-      window.location.href = "/";
+      window.location.href = "/"; // Use window.location.href for redirect
     } catch (error) {
       console.error("Sign out error:", error);
       throw error;

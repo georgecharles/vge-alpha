@@ -19,7 +19,7 @@ import SubscriptionSuccess from "./components/SubscriptionSuccess";
 import SubscriptionCancel from "./components/SubscriptionCancel";
 import AccountSettings from "./components/AccountSettings";
 import { RequireAuth } from "./components/RequireAuth";
-import routes from "tempo-routes";
+import routes from "./tempo-routes";
 import FeaturedProperties from "./components/SearchResults";
 import MarketInsightsPage from "./components/MarketInsightsPage";
 import MarketTrendsPage from "./components/MarketTrendsPage";
@@ -30,6 +30,9 @@ import InvestmentCalculator from "./components/InvestmentCalculator";
 import HelpSupportPage from "./components/HelpSupportPage";
 import { ChatBot } from "./components/ChatBot";
 import AuthCallback from "./components/AuthCallback";
+import PropertyManagementPage from "./components/PropertyManagementPage";
+import InvestmentOpportunitiesPage from "./components/InvestmentOpportunitiesPage";
+import AboutUsPage from "./components/AboutUsPage";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -90,7 +93,10 @@ function AppContent() {
               }
             />
             <Route path="/insights" element={<MarketInsightsPage />} />
-            <Route path="/trends" element={<AuthProvider><MarketTrendsPage /></AuthProvider>} />
+            <Route
+              path="/trends"
+              element={<MarketTrendsPage />}
+            />
             <Route path="/research" element={<ResearchPage />} />
             <Route path="/blog" element={<BlogPage />} />
             <Route path="/article/:title" element={<ArticlePage />} />
@@ -98,6 +104,9 @@ function AppContent() {
             <Route path="/calculators" element={<InvestmentCalculator />} />
             <Route path="/help" element={<HelpSupportPage />} />
             <Route path="/auth/callback" element={<AuthCallback />} />
+            <Route path="/property-management" element={<PropertyManagementPage />} />
+            <Route path="/investment-opportunities" element={<InvestmentOpportunitiesPage />} />
+            <Route path="/about-us" element={<AboutUsPage />} />
             {import.meta.env.VITE_TEMPO === "true" && (
               <Route path="/tempobook/*" />
             )}

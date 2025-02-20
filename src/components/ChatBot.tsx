@@ -84,7 +84,7 @@ export function ChatBot() {
           `
           *,
           sender:profiles!messages_sender_id_fkey(id, full_name, email),
-          receiver:profiles!messages_receiver_id_fkey(id, full_name, email)
+          receiver:profiles!messages_receiver_id_fkey(full_name, email)
         `,
         )
         .or(`sender_id.eq.${user?.id},receiver_id.eq.${user?.id}`)
@@ -114,6 +114,7 @@ export function ChatBot() {
   };
 
   const handleSend = async (text: string) => {
+    console.log("handleSend called with text:", text); // Add this line
     if (!text.trim()) return;
 
     if (activeTab === "ai") {
@@ -135,6 +136,12 @@ export function ChatBot() {
       if (!user || !selectedContact) return;
 
       try {
+        console.log("Sending message to Supabase:", { // Add this line
+          sender_id: user.id,
+          receiver_id: selectedContact.id,
+          content: text,
+          is_support: activeTab === "support",
+        });
         const { data, error } = await supabase.from("messages").insert([
           {
             sender_id: user.id,
@@ -144,7 +151,12 @@ export function ChatBot() {
           },
         ]);
 
-        if (error) throw error;
+        if (error) {
+          console.error("Supabase insert error:", error); // Add this line
+          throw error;
+        }
+
+        console.log("Supabase insert success:", data); // Add this line
 
         setMessages((prev) => [
           ...prev,
@@ -194,6 +206,7 @@ export function ChatBot() {
           filter: `or(and(sender_id.eq.${user.id},receiver_id.eq.${selectedContact.id}),and(sender_id.eq.${selectedContact.id},receiver_id.eq.${user.id}))`,
         },
         (payload) => {
+          console.log("Realtime message received:", payload); // Add this line
           const newMessage = payload.new;
           if (newMessage.sender_id !== user.id) {
             setMessages((prev) => [

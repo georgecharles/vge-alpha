@@ -9,7 +9,7 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">About Us</h3>
             <p className="text-gray-400">
-              Your trusted source for property search and market analysis.
+              Your trusted source for property search and market analysis. MyVGE is part of Very Good Marketing Co.
             </p>
           </div>
           <div>
@@ -40,17 +40,14 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-gray-400">
-              <li>support@myvge.co.uk</li>
-              <li>0800 123 4567</li>
-              <li>123 Property Lane, London</li>
+              <li>@myvge.com</li>
+              <li>Lytchett House, 13 Freeland Park, Poole, Dorset, England, BH16 6FA</li>
             </ul>
           </div>
           <div>
             <h3 className="text-lg font-semibold mb-4">Compliance</h3>
             <ul className="space-y-2 text-gray-400">
-              <li>FCA Registration: 123456</li>
-              <li>ICO Registration: ABC123</li>
-              <li>Company No: 12345678</li>
+              <li>Company No: 15271126</li>
             </ul>
           </div>
         </div>
@@ -58,8 +55,8 @@ export function Footer() {
           <RandomFact />
           <div className="text-center text-gray-400 space-y-2">
             <p className="text-xs">
-              MyVGE is a trading name of MyVGE Ltd, registered in England and
-              Wales. Registered office: 123 Property Lane, London, EC1A 1BB.
+              MyVGE is a trading name of Very Good Marketing Co, registered in England and
+              Wales. Registered office: Lytchett House, 13 Freeland Park, Poole, Dorset, England, BH16 6FA. Company No: 15271126
             </p>
             <p className="text-xs">
               The information on this website is for general information

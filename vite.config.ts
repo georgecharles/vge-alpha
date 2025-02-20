@@ -1,14 +1,6 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from "path"
-import { tempo } from "tempo-devtools/dist/vite";
-
-const conditionalPlugins: [string, Record<string, any>][] = [];
-
-// @ts-ignore
-if (process.env.TEMPO === "true") {
-    conditionalPlugins.push(["tempo-devtools/swc", {}]);
-}
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -19,17 +11,13 @@ export default defineConfig({
     force: true,
   },
   plugins: [
-    react({
-      // plugins: conditionalPlugins, // remove conditional plugins
-    }),
-    tempo(),
+    react(),
   ],
   resolve: {
     preserveSymlinks: true,
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      // Explicitly add .js extension (TEMPORARY TEST)
-      "@/lib": path.resolve(__dirname, "./src/lib/utils.js"), // Modified line
+      "@/lib": path.resolve(__dirname, "./src/lib"),
       "@/components": path.resolve(__dirname, "./src/components"),
       "@/types": path.resolve(__dirname, "./src/types"),
     },
@@ -60,4 +48,4 @@ export default defineConfig({
   define: {
     "process.env": {},
   },
-})
+});

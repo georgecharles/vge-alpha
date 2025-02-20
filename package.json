@@ -51,7 +51,6 @@
     "embla-carousel-react": "^8.1.5",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.394.0",
-    "nprogress": "^0.2.0",
     "posthog-js": "^1.114.0",
     "react": "^18.2.0",
     "react-day-picker": "^8.10.1",

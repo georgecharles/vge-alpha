@@ -21,7 +21,7 @@ import React from "react";
                 exit={{ opacity: 0, y: 20 }}
                 transition={{ duration: 0.2, delay: 0.1 }}
                 className={cn(
-                  "fixed inset-0 bg-white/80 backdrop-blur-2xl",
+                  "fixed inset-0 bg-white/80 backdrop-blur-2xl", // White gaussian blur applied here
                   "flex flex-col overflow-y-auto pb-12",
                 )}
               >

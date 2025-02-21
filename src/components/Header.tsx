@@ -37,7 +37,7 @@ import React from "react";
     interface HeaderProps {
       isAuthenticated?: boolean;
       onSignIn?: () => void;
-      onSignUp?: () => void;
+      onSignUp?: () => Promise<void>;
       onSignOut?: () => Promise<void>;
       userProfile?: {
         full_name?: string | null;
@@ -61,6 +61,9 @@ import React from "react";
       const [showMobileMenu, setShowMobileMenu] = React.useState(false);
       const navigate = useNavigate();
       const { user, profile, signOut } = useAuth();
+      const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
+      const [authMode, setAuthMode] =
+        React.useState<"signin" | "signup">("signin");
       const { signOut: clerkSignOut, isSignedIn, user: clerkUser } = useClerk();
 
       const handleSignOut = async () => {
@@ -104,7 +107,7 @@ import React from "react";
       return (
         <>
           <header
-            className="fixed top-4 left-0 right-0 z-50 px-4 py-2 bg-background/80 backdrop-blur-md shadow-lg rounded-full mx-auto max-w-[1400px]"
+            className="fixed top-4 left-0 right-0 z-50 px-4 py-2 bg-white shadow-lg rounded-full mx-auto max-w-[1400px]"
           >
             <div className="container mx-auto h-14 px-6 flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -262,7 +265,7 @@ import React from "react";
                       </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                      className="w-56 bg-white/80 backdrop-blur-md"
+                      className="w-56 bg-white backdrop-blur-md"
                       align="end"
                       forceMount
                     >
@@ -284,7 +287,7 @@ import React from "react";
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         <span>Dashboard</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={handleSignOut}>
+                      <DropdownMenuItem onClick={() => navigate("/account")}>
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>

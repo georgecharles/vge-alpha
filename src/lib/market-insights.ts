@@ -86,10 +86,10 @@ import { supabase } from "./supabase";
         // Clean up the response to ensure proper formatting
         let insights = data.candidates[0].content.parts[0].text;
         insights = insights
-          .replace(/\*\*/g, "") // Remove any asterisks
-          .replace(/\*\s/g, "- ") // Replace any remaining asterisk bullets with dashes
-          .replace(/\d+\.\s/g, "- ") // Replace numbered lists with bullet points
-          .replace(/^[0-9]\./gm, "-") // Replace numbers at start of lines with dashes
+          .replace(/\*\*/g, "") // Remove any asterisks - No longer needed as we are asking for markdown
+          .replace(/\*\s/g, "- ") // Replace any remaining asterisk bullets with dashes - No longer needed as we are asking for markdown
+          .replace(/\d+\.\s/g, "- ") // Replace numbered lists with bullet points - No longer needed as we are asking for markdown
+          .replace(/^[0-9]\./gm, "-") // Replace numbers at start of lines with dashes - No longer needed as we are asking for markdown
           .replace(/\n\n+/g, "\n\n") // Normalize line spacing
           .replace(/\n\s*\n/g, "\n\n") // Fix multiple blank lines
           .trim();
@@ -133,7 +133,17 @@ import { supabase } from "./supabase";
       try {
         const prompt = `Predict the 1-year property price forecast for ${area}, UK.
         Consider historical price data, current market trends, interest rate forecasts, and economic indicators.
-        Provide a concise summary including percentage change and key factors driving the prediction.`;
+        Provide a concise summary using Markdown headings for key sections and bullet points for details.
+
+        Example format:
+
+        ## Price Forecast Summary
+        - Predicted Change: [Percentage]%
+        - Key Factors:
+          - [Factor 1]
+          - [Factor 2]
+          - [Factor 3]
+        `;
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
@@ -176,8 +186,21 @@ import { supabase } from "./supabase";
       try {
         const prompt = `Identify top 3 emerging property investment hotspots in the ${area}, UK, for 2024-2025.
         Analyze demographic trends, economic growth indicators, infrastructure developments, and average property price growth over the last 3 years.
-        Provide a concise summary for each hotspot, highlighting key factors making them attractive for investment, including specific postcodes or areas if possible.
-        Format as a list of hotspot names, each followed by a paragraph of analysis.`;
+        Provide a concise summary for each hotspot using Markdown headings for hotspot names and bullet points for analysis.
+
+        Example format:
+
+        ## Hotspot 1: [Hotspot Name]
+        - [Factor 1]
+        - [Factor 2]
+        - [Factor 3]
+
+        ## Hotspot 2: [Hotspot Name]
+        - ...
+
+        ## Hotspot 3: [Hotspot Name]
+        - ...
+        `;
 
         const response = await fetch(
           `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
@@ -221,7 +244,21 @@ import { supabase } from "./supabase";
         const prompt = `Identify 3 key emerging trends in the UK real estate market for 2024-2025.
         Focus on shifts in demand for property types (e.g., detached houses, apartments, bungalows) and identify any emerging high-growth neighborhoods across the UK.
         Analyze factors such as changing buyer preferences, lifestyle shifts, remote work impact, and regional economic forecasts.
-        Provide a concise summary for each trend, explaining the trend and its implications for property investors.`;
+        Provide a concise summary for each trend using Markdown headings for trend names and bullet points for details.
+
+        Example format:
+
+        ## Trend 1: [Trend Name]
+        - [Factor 1]
+        - [Factor 2]
+        - [Factor 3]
+
+        ## Trend 2: [Trend Name]
+        - ...
+
+        ## Trend 3: [Trend Name]
+        - ...
+        `;
 
 
         const response = await fetch(
@@ -269,7 +306,24 @@ import { supabase } from "./supabase";
         2. Employment Rates: Current employment trends, job growth/decline in key sectors, and impact on housing demand.
         3. GDP Growth: Current GDP growth rate, forecasts for the next year, and correlation with property market health.
 
-        Provide a concise analysis summarizing the overall UK property market health based on these economic indicators and suggest potential implications for property investors.`;
+        Provide a concise analysis summarizing the overall UK property market health based on these economic indicators using Markdown headings for sections and bullet points for details where appropriate.
+
+        Example format:
+
+        ## Economic Summary
+        [Overall summary paragraph]
+
+        ## Interest Rates Impact
+        - [Bullet point about interest rate levels]
+        - [Bullet point about predicted changes]
+        - [Bullet point about impact on affordability]
+
+        ## Employment Rates Impact
+        - ...
+
+        ## GDP Growth Impact
+        - ...
+        `;
 
 
         const response = await fetch(

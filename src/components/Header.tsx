@@ -32,7 +32,7 @@ import React from "react";
       DropdownMenuTrigger,
     } from "./ui/dropdown-menu";
     import { useLocation } from "react-router-dom";
-    import { AuthModal } from "./AuthModal"; // Import AuthModal
+    import { SignInButton, SignUpButton, useClerk } from "@clerk/clerk-react";
 
     interface HeaderProps {
       isAuthenticated?: boolean;
@@ -61,9 +61,7 @@ import React from "react";
       const [showMobileMenu, setShowMobileMenu] = React.useState(false);
       const navigate = useNavigate();
       const { user, profile, signOut } = useAuth();
-      const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
-      const [authMode, setAuthMode] =
-        React.useState<"signin" | "signup">("signin");
+      const { signOut: clerkSignOut, isSignedIn, user: clerkUser } = useClerk();
 
       const handleSignOut = async () => {
         console.log("Sign out button clicked");
@@ -220,55 +218,51 @@ import React from "react";
                   <Crown className="mr-2 h-4 w-4" />
                   Upgrade
                 </Button>
-                {!isAuthenticated ? (
-                  <div className="hidden md:flex items-center gap-4">
-                    <Button
-                      variant="ghost"
-                      onClick={() => {
-                        setAuthMode("signin");
-                        setIsAuthModalOpen(true);
-                      }}
-                    >
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Sign In
-                    </Button>
-                    <Button
-                      onClick={() => {
-                        setAuthMode("signup");
-                        setIsAuthModalOpen(true);
-                      }}
-                      variant="default"
-                    >
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Sign Up
-                    </Button>
-                  </div>
-                ) : (
+                {!isSignedIn ? (
+                    <div className="hidden md:flex items-center gap-4">
+                      {/* Use Clerk's SignInButton */}
+                      <SignInButton mode="modal">
+                        <Button variant="ghost">
+                          <LogIn className="mr-2 h-4 w-4" />
+                          Sign In
+                        </Button>
+                      </SignInButton>
+                      {/* Use Clerk's SignUpButton */}
+                      <SignUpButton mode="modal">
+                        <Button variant="default">
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Sign Up
+                        </Button>
+                      </SignUpButton>
+                    </div>
+                  ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="relative h-10 w-10 rounded-full"
-                      >
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage
-                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.full_name || "")}&background=random`}
-                            alt={userProfile?.full_name || "User avatar"}
-                          />
-                          <AvatarFallback className="bg-primary/10">
-                            {userProfile?.full_name
-                              ?.split(" ")
-                              .filter(Boolean)
-                              .map((n) => n[0])
-                              .slice(0, 2)
-                              .join("")
-                              .toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
-                      </Button>
+                      <div >
+                        <Button
+                          variant="ghost"
+                          className="relative h-10 w-10 rounded-full"
+                        >
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage
+                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.full_name || "")}&background=random`}
+                              alt={userProfile?.full_name || "User avatar"}
+                            />
+                            <AvatarFallback className="bg-primary/10">
+                              {userProfile?.full_name
+                                ?.split(" ")
+                                .filter(Boolean)
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")
+                                .toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Button>
+                      </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
-                      className="w-56"
+                      className="w-56 bg-white/80 backdrop-blur-md"
                       align="end"
                       forceMount
                     >
@@ -290,7 +284,7 @@ import React from "react";
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         <span>Dashboard</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/account")}>
+                      <DropdownMenuItem onClick={handleSignOut}>
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
@@ -378,39 +372,24 @@ import React from "react";
               >
                 About Us
               </a>
-              {!isAuthenticated ? (
+              {!isSignedIn ? (
                 <div className="space-y-4 pt-6">
-                  <Button
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      setAuthMode("signin");
-                      setIsAuthModalOpen(true);
-                    }}
-                  >
-                    <LogIn className="mr-2 h-4 w-4" />
-                    Sign In
-                  </Button>
-                  <Button
-                    className="w-full justify-start"
-                    onClick={() => {
-                      setAuthMode("signup");
-                      setIsAuthModalOpen(true);
-                    }}
-                  >
-                    <UserPlus className="mr-2 h-4 w-4" />
-                    Sign Up
-                  </Button>
+                  <SignInButton mode="modal">
+                    <Button variant="ghost" className="w-full justify-start">
+                      <LogIn className="mr-2 h-4 w-4" />
+                      Sign In
+                    </Button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <Button className="w-full justify-start">
+                      <UserPlus className="mr-2 h-4 w-4" />
+                      Sign Up
+                    </Button>
+                  </SignUpButton>
                 </div>
               ) : null}
             </nav>
           </MobileNav>
-
-          <AuthModal
-            isOpen={isAuthModalOpen}
-            onClose={() => setIsAuthModalOpen(false)}
-            defaultMode={authMode}
-          />
         </>
       );
     };

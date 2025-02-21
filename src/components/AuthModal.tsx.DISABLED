@@ -1,4 +1,5 @@
-import { createContext, useContext, useEffect, useState } from "react";
+<boltAction type="file" filePath="src/lib/auth.tsx">
+    import { createContext, useContext, useEffect, useState } from "react";
     import { supabase } from "./supabase";
     import type { Tables } from "../types/supabase";
     import { useNavigate } from "react-router-dom";
@@ -78,7 +79,6 @@ import { createContext, useContext, useEffect, useState } from "react";
           console.log("useEffect - AuthProvider - CLEANUP");
         };
       }, [isSignedIn, clerkUser]);
-
 
 
       async function signOut() {

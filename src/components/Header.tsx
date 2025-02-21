@@ -39,14 +39,24 @@ import React from "react";
       onSignIn?: () => void;
       onSignUp?: () => Promise<void>;
       onSignOut?: () => Promise<void>;
-      userProfile?: Profile | null; // Updated type to Profile or null
+      userProfile?: {
+        full_name?: string | null;
+        email?: string | null;
+        created_at?: string;
+        id?: string;
+        role?: "user" | "admin" | "moderator" | null;
+        stripe_customer_id?: string | null;
+        subscription_status?: string | null;
+        subscription_tier?: "free" | "basic" | "pro" | "premium" | null;
+        updated_at?: string;
+      };
     }
 
     const Header = ({
       isAuthenticated = false,
       onSignIn,
       onSignUp,
-      userProfile = null, // Default to null
+      userProfile = {},
     }: HeaderProps) => {
       const [showMobileMenu, setShowMobileMenu] = React.useState(false);
       const navigate = useNavigate();
@@ -97,10 +107,192 @@ import React from "react";
             className="fixed top-4 left-0 right-0 z-50 px-4 py-2 bg-background/80 backdrop-blur-md shadow-lg rounded-full mx-auto max-w-[1400px]"
           >
             <div className="container mx-auto h-14 px-6 flex items-center justify-between">
-              {/* ... rest of the header code ... */}
-                  {/* ... rest of the header code ... */}
+              <div className="flex items-center gap-2">
+                <a href="/" className="hover:opacity-80 transition-opacity">
+                  <img
+                    src="https://i.postimg.cc/GpdY6N74/my-1920-x-1080-px-1.png"
+                    alt="MyVGE"
+                    className="h-8"
+                  />
+                </a>
+              </div>
+
+              <NavigationMenu className="hidden lg:flex">
+                <NavigationMenuList>
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger className="text-sm font-medium transition-colors hover:text-primary bg-transparent hover:bg-transparent">
+                      Market
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid w-[400px] gap-3 p-4 rounded-xl">
+                        <ListItem href="/trends" title="Market Trends">
+                          Stay updated with the latest real estate market
+                          trends.
+                        </ListItem>
+                        <ListItem href="/insights" title="Market Insights">
+                          Deep dive into property market analytics and
+                          forecasts.
+                        </ListItem>
+                        <ListItem href="/research" title="Research & Reports">
+                          Access expert analysis and reports.
+                        </ListItem>
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <NavigationMenuLink
+                      className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
+                      href="/deals"
+                    >
+                      Deals
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <NavigationMenuTrigger className="text-sm font-medium transition-colors hover:text-primary bg-transparent hover:bg-transparent">
+                      Services
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
+                      <ul className="grid w-[400px] gap-3 p-4 rounded-xl">
+                        <ListItem
+                          href="/property-management"
+                          title="Property Management"
+                        >
+                          Let us take care of your property.
+                        </ListItem>
+                        <ListItem
+                          href="/investment-opportunities"
+                          title="Investment Opportunities"
+                        >
+                          Discover tailored investment strategies.
+                        </ListItem>
+                        <ListItem href="/calculators" title="Calculators">
+                          Calculate different aspects of your property
+                          investment.
+                        </ListItem>
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
+
+                  <NavigationMenuItem>
+                    <NavigationMenuLink
+                      className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
+                      href="/pricing"
+                    >
+                      Pricing
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <NavigationMenuLink
+                      className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
+                      href="/help"
+                    >
+                      Help & Support
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                  <NavigationMenuItem>
+                    <NavigationMenuLink
+                      className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
+                      href="/about-us"
+                    >
+                      About Us
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                </NavigationMenuList>
+              </NavigationMenu>
+
+              <div className="flex items-center gap-4">
+                <Button
+                  variant="ghost"
+                  className="lg:hidden p-2"
+                  onClick={() => setShowMobileMenu(true)}
+                >
+                  <Menu className="h-6 w-6" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  className="hidden md:flex bg-gradient-to-r from-emerald-400 to-cyan-400 text-white hover:from-emerald-500 hover:to-cyan-500 border border-emerald-500/20 shadow-lg hover:shadow-emerald-500/20 transition-all duration-300"
+                  onClick={() => (window.location.href = "/pricing")}
+                >
+                  <Crown className="mr-2 h-4 w-4" />
+                  Upgrade
+                </Button>
+                {isSignedIn ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <div>
+                        <Button
+                          variant="ghost"
+                          className="relative h-10 w-10 rounded-full"
+                        >
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage
+                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.full_name || "")}&background=random`}
+                              alt={userProfile?.full_name || "User avatar"}
+                            />
+                            <AvatarFallback className="bg-primary/10">
+                              {userProfile?.full_name
+                                ?.split(" ")
+                                .filter(Boolean)
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")
+                                .toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Button>
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      className="w-56 bg-white/80 backdrop-blur-md"
+                      align="end"
+                      forceMount
+                    >
+                      <DropdownMenuItem className="flex-col items-start">
+                        <div className="font-medium">
+                          {userProfile?.full_name}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {userProfile?.email}
+                        </div>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() =>
+                          window.location.pathname !== "/dashboard" &&
+                          navigate("/dashboard")
+                        }
+                      >
+                        <LayoutDashboard className="mr-2 h-4 w-4" />
+                        <span>Dashboard</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => navigate("/account")}>
+                        <Settings className="mr-2 h-4 w-4" />
+                        <span>Account Settings</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={handleSignOut}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        <span>Log Out</span>
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                ) : (
+                  <div className="hidden md:flex items-center gap-4">
+                    <SignInButton mode="modal">
+                      <Button variant="ghost">
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Sign In
+                      </Button>
+                    </SignInButton>
+                    <SignUpButton mode="modal">
+                      <Button variant="default">
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Sign Up
+                      </Button>
+                    </SignUpButton>
+                  </div>
                 )}
               </div>
             </div>

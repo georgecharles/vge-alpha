@@ -362,3 +362,133 @@ import { supabase } from "./supabase";
         return "Failed to generate economic indicator analysis. Please try again later.";
       }
     }
+
+    export async function generateCashFlowAnalysis(propertyDetails: any) {
+      try {
+        const prompt = `Analyze the cash flow potential of a property with the following details:
+        ${JSON.stringify(propertyDetails)}
+        Provide a concise cash flow analysis, including key metrics like gross rental yield, net operating income, and monthly cash flow.`;
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: prompt,
+                    },
+                  ],
+                },
+              ],
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          throw new Error("Invalid response format from Gemini API for cash flow analysis");
+        }
+
+        return data.candidates[0].content.parts[0].text;
+      } catch (error) {
+        console.error("Error generating cash flow analysis:", error);
+        return "Failed to generate cash flow analysis. Please try again later.";
+      }
+    }
+
+    export async function generateCapRateAnalysis(propertyDetails: any) {
+      try {
+        const prompt = `Analyze the cap rate for a property with the following details:
+        ${JSON.stringify(propertyDetails)}
+        Provide a concise cap rate analysis, explaining the calculated cap rate and its implications for investment.`;
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: prompt,
+                    },
+                  ],
+                },
+              ],
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          throw new Error("Invalid response format from Gemini API for cap rate analysis");
+        }
+
+        return data.candidates[0].content.parts[0].text;
+      } catch (error) {
+        console.error("Error generating cap rate analysis:", error);
+        return "Failed to generate cap rate analysis. Please try again later.";
+      }
+    }
+
+    export async function generateROIForecasting(propertyDetails: any) {
+      try {
+        const prompt = `Provide a 5-year ROI forecast for a property with the following details:
+        ${JSON.stringify(propertyDetails)}
+        Include projections for property appreciation, rental income growth, and potential expenses.
+        Summarize the 5-year ROI forecast, highlighting key factors and potential returns.`;
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${import.meta.env.VITE_GEMINI_API_KEY}`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: prompt,
+                    },
+                  ],
+                },
+              ],
+            }),
+          },
+        );
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (!data.candidates?.[0]?.content?.parts?.[0]?.text) {
+          throw new Error("Invalid response format from Gemini API for ROI forecasting");
+        }
+
+        return data.candidates[0].content.parts[0].text;
+      } catch (error) {
+        console.error("Error generating ROI forecasting:", error);
+        return "Failed to generate ROI forecasting. Please try again later.";
+      }
+    }

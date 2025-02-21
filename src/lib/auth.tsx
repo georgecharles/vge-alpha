@@ -11,7 +11,7 @@ import { createContext, useContext, useEffect, useState } from "react";
       profile: Profile | null;
       isLoading: boolean;
       signOut: () => Promise<void>;
-      fetchProfile: (userId: string) => Promise<void>;
+      fetchProfile: (userId: string) => Promise<void>; // Add fetchProfile to the context
     }
 
     const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +21,7 @@ import { createContext, useContext, useEffect, useState } from "react";
       const [isLoading, setIsLoading] = useState(true);
       const navigate = useNavigate();
       const { user: clerkUser, isSignedIn, signOut: clerkSignOut, isLoaded } = useClerk();
+      const [user, setUser] = useState(null);
 
       async function fetchProfile(userId: string) {
         console.log("fetchProfile - START", userId);
@@ -41,6 +42,7 @@ import { createContext, useContext, useEffect, useState } from "react";
           }
 
           console.log("Fetched profile:", profile);
+
           setProfile(profile);
         } catch (error) {
           console.error("Error fetching profile:", error);
@@ -51,25 +53,31 @@ import { createContext, useContext, useEffect, useState } from "react";
         }
       }
 
-
-      useEffect(() => {
-        console.log("AuthProvider useEffect - START");
-        setIsLoading(true); // Set isLoading to true when auth state changes
-
-        const initAuth = async () => {
+      const initAuth = async (setUser: React.Dispatch<React.SetStateAction<any>>, fetchProfile: (userId: string) => Promise<void>) => {
+        setIsLoading(true);
+        try {
           if (isSignedIn && clerkUser) {
             setUser(clerkUser);
             await fetchProfile(clerkUser.id);
           } else {
             setUser(null);
             setProfile(null);
-            setIsLoading(false); // Set isLoading to false when not signed in
           }
+        } catch (error) {
+          console.error("Error initializing auth:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+
+      useEffect(() => {
+        console.log("useEffect - AuthProvider - START");
+        initAuth(setUser, fetchProfile);
+
+        return () => {
+          console.log("useEffect - AuthProvider - CLEANUP");
         };
-
-        initAuth();
       }, [isSignedIn, clerkUser]);
-
 
       async function signOut() {
         console.log("signOut - START");

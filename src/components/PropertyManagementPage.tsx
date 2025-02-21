@@ -39,10 +39,10 @@ export default function PropertyManagementPage() {
         <main className="container mx-auto px-4 py-8 pt-24">
           <div className="max-w-4xl mx-auto space-y-8">
             <div className="text-center">
-              <h1 className="text-2xl font-bold mb-2">
+              <h1 className="text-3xl font-bold mb-2">
                 Comprehensive Property Management
               </h1>
-              <p className="text-2x1 foreground">
+              <p className="text-muted-foreground">
                 We offer a full range of property management services to
                 maximize your investment returns.
               </p>

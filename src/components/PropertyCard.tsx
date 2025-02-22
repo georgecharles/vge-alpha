@@ -1,137 +1,184 @@
 import React from "react";
-    import { Card, CardContent } from "./ui/card";
-    import { Button } from "./ui/button";
-    import { MessageCircle, Heart, HeartOff } from "lucide-react";
-    import { useAuth } from "../lib/auth";
-    import { saveProperty } from "../lib/properties";
-    import { useToast } from "./ui/use-toast";
-    import { useNavigate } from "react-router-dom";
+import { Card, CardContent } from "./ui/card";
+import { Button } from "./ui/button";
+import { MessageCircle, Lock } from "lucide-react";
+import { BitcoinPrice } from "./BitcoinPrice";
 
-    interface PropertyCardProps {
-      id?: string;
-      address?: string;
-      price?: number;
-      squareFootage?: number;
-      bedrooms?: number;
-      bathrooms?: number;
-      isPremium?: boolean;
-      isSubscriber?: boolean;
-      images?: string[];
-    }
+const PROPERTY_FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+  "https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+  "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+  "https://images.unsplash.com/photo-1570129477492-45c003edd2be?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+];
 
-    const PropertyCard = ({
-      id = "1",
-      address = "123 Example Street, City, State 12345",
-      price = 500000,
-      squareFootage = 0,
-      bedrooms = 0,
-      bathrooms = 0,
-      isPremium = true,
-      isSubscriber = false,
-      images = [],
-    }: PropertyCardProps) => {
-      const { user } = useAuth();
-      const { toast } = useToast();
-      const navigate = useNavigate();
-      const [isLiked, setIsLiked] = React.useState(false); // Example: Initialize with false
-      const [likeCount, setLikeCount] = React.useState(0); // Example: Initialize with 0
-      const [isImageLoading, setIsImageLoading] = React.useState(true);
+const DEAL_FALLBACK_IMAGES = [
+  "https://images.unsplash.com/photo-1464938050520-ef2270bb8ce8?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+  "https://images.unsplash.com/photo-1497366811353-6870744d04b2?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+  "https://images.unsplash.com/photo-1497366754035-f200968a6e72?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+  "https://images.unsplash.com/photo-1497366216548-37526070297c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+  "https://images.unsplash.com/photo-1497366858526-0766cadbe8fa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
+];
 
-      const handleLike = async () => {
-        if (!user) {
-          toast({
-            title: "Please sign in",
-            description: "You must be signed in to save properties.",
-          });
-          return;
-        }
+interface PropertyCardProps {
+  id?: string;
+  address?: string;
+  price?: number;
+  squareFootage?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  isPremium?: boolean;
+  isSubscriber?: boolean;
+  assignedUser?: any;
+  author?: any;
+  type?: string;
+  status?: string;
+  potential_profit?: number;
+  roi_percentage?: number;
+  images?: string[];
+  onMessageAuthor?: (authorId: string) => void;
+}
 
-        setIsLiked(!isLiked);
-        setLikeCount(isLiked ? likeCount - 1 : likeCount + 1);
+interface PropertyCardProps {
+  id?: string;
+  address?: string;
+  price?: number;
+  squareFootage?: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  isPremium?: boolean;
+  isSubscriber?: boolean;
+  assignedUser?: any;
+  author?: any;
+  type?: string;
+  status?: string;
+  potential_profit?: number;
+  roi_percentage?: number;
+  images?: string[];
+  onMessageAuthor?: (authorId: string) => void;
+  onClick?: () => void;
+}
 
-        try {
-          await saveProperty(id, user.id);
-          toast({
-            title: "Success",
-            description: "Property has been saved successfully.",
-          });
-        } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to save property. Please try again.",
-            variant: "destructive",
-          });
-        }
-      };
+const PropertyCard = ({
+  id = "1",
+  address = "123 Example Street, City, State 12345",
+  price = 500000,
+  squareFootage = 0,
+  bedrooms = 0,
+  bathrooms = 0,
+  isPremium = true,
+  isSubscriber = false,
+  assignedUser,
+  author,
+  type = "property",
+  status,
+  potential_profit,
+  roi_percentage,
+  images = [],
+  onMessageAuthor,
+  onClick,
+}: PropertyCardProps) => {
+  const [isImageLoading, setIsImageLoading] = React.useState(true);
 
-      return (
-        <Card className="overflow-hidden hover:shadow-lg transition-shadow">
-          <div className="relative h-48 bg-muted">
-            {isImageLoading && (
-              <div className="absolute inset-0 animate-pulse bg-muted" />
+  const fallbackImage = React.useMemo(() => {
+    const fallbackImages =
+      type === "deal" ? DEAL_FALLBACK_IMAGES : PROPERTY_FALLBACK_IMAGES;
+    return fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
+  }, [type]);
+
+  return (
+    <Card
+      className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+      onClick={onClick}
+    >
+      <div className="relative h-48 bg-muted">
+        {isImageLoading && (
+          <div className="absolute inset-0 animate-pulse bg-muted" />
+        )}
+        <img
+          src={
+            (images &&
+              Array.isArray(images) &&
+              images.length > 0 &&
+              images[0]) ||
+            fallbackImage
+          }
+          alt="Property"
+          className={`w-full h-full object-cover transition-opacity duration-200 ${isImageLoading ? "opacity-0" : "opacity-100"}`}
+          onLoad={() => setIsImageLoading(false)}
+        />
+        {isPremium && !isSubscriber && (
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] flex items-center justify-center">
+            <div className="text-center p-6">
+              <Lock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Subscribe to view premium properties
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <CardContent className="p-4">
+        <div className="mb-4">
+          <h3 className="font-semibold mb-1 line-clamp-1">{address}</h3>
+          <div className="flex items-baseline gap-2">
+            <span className="text-2xl font-bold">
+              £{price.toLocaleString()}
+            </span>
+            <BitcoinPrice amount={price} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
+          <div>
+            <span className="block text-muted-foreground">Beds</span>
+            <span className="font-medium">{bedrooms}</span>
+          </div>
+          <div>
+            <span className="block text-muted-foreground">Baths</span>
+            <span className="font-medium">{bathrooms}</span>
+          </div>
+          <div>
+            <span className="block text-muted-foreground">Sq Ft</span>
+            <span className="font-medium">{squareFootage}</span>
+          </div>
+        </div>
+
+        {type === "deal" && (
+          <div className="space-y-2 mb-4">
+            {potential_profit && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Potential Profit:</span>
+                <span className="font-medium text-emerald-500">
+                  £{potential_profit.toLocaleString()}
+                </span>
+              </div>
             )}
-            <img
-              src={
-                (images && Array.isArray(images) && images.length > 0 && images[0]) ||
-                "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600"
-              }
-              alt="Property"
-              className={`w-full h-full object-cover transition-opacity duration-200 ${isImageLoading ? "opacity-0" : "opacity-100"}`}
-              onLoad={() => setIsImageLoading(false)}
-            />
-            {isPremium && !isSubscriber && (
-              <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] flex items-center justify-center">
-                <div className="text-center p-6">
-                  <Lock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground">
-                    Subscribe to view premium properties
-                  </p>
-                </div>
+            {roi_percentage && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">ROI:</span>
+                <span className="font-medium text-emerald-500">
+                  {roi_percentage}%
+                </span>
               </div>
             )}
           </div>
+        )}
 
-          <CardContent className="p-4">
-            <h3 className="font-semibold mb-1 line-clamp-1">{address}</h3>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold">£{price.toLocaleString()}</span>
-              {/* <BitcoinPrice amount={price} /> */}
-            </div>
+        {author && onMessageAuthor && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => onMessageAuthor(author.id)}
+          >
+            <MessageCircle className="w-4 h-4 mr-2" />
+            Contact Agent
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
 
-            <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-              <div>
-                <span className="block text-muted-foreground">Beds</span>
-                <span className="font-medium">{bedrooms}</span>
-              </div>
-              <div>
-                <span className="block text-muted-foreground">Baths</span>
-                <span className="font-medium">{bathrooms}</span>
-              </div>
-              <div>
-                <span className="block text-muted-foreground">Sq Ft</span>
-                <span className="font-medium">{squareFootage}</span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Button variant="ghost" size="icon" onClick={handleLike}>
-                  {isLiked ? (
-                    <Heart className="w-4 h-4 text-red-500" />
-                  ) : (
-                    <HeartOff className="w-4 h-4" />
-                  )}
-                </Button>
-                <span>{likeCount}</span>
-              </div>
-              <Button variant="outline" size="sm" onClick={() => navigate(`/property/${id}`)}>
-                <MessageCircle className="w-4 h-4 mr-2" />
-                View Details
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      );
-    };
-
-    export default PropertyCard;
+export default PropertyCard;

@@ -12,13 +12,12 @@ export default function ResearchPage() {
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] =
     React.useState(false);
 
-  const isPro =
-    profile?.subscription_tier === "pro" ||
-    profile?.subscription_tier === "premium";
+  // Remove the subscription check for now
+  const isPro = true; // Temporarily allow access to all users
 
   return (
     <PageTransition>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-screen bg-neutral">
         <Header isAuthenticated={!!user} userProfile={profile || undefined} />
         <HeroSection
           title="Research & Reports"
@@ -31,7 +30,7 @@ export default function ResearchPage() {
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-7xl mx-auto space-y-8">
             <div className="text-center mb-12">
-              <h1 className="text-4xl font-bold mb-4">Latest Research</h1>
+              <h1 className="text-4xl font-bold mb-4 text-primary">Latest Research</h1>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Stay informed with our comprehensive research reports and expert
                 analysis
@@ -41,14 +40,14 @@ export default function ResearchPage() {
               <ResearchReports isPro={isPro} />
             ) : (
               <div className="text-center py-12">
-                <h2 className="text-2xl font-semibold mb-4">
+                <h2 className="text-2xl font-semibold mb-4 text-accent">
                   Pro Plan Required
                 </h2>
                 <p className="text-muted-foreground mb-6">
                   Access to research reports is available exclusively to Pro and
                   Premium subscribers.
                 </p>
-                <Button onClick={() => setIsSubscriptionModalOpen(true)}>
+                <Button onClick={() => setIsSubscriptionModalOpen(true)} className="bg-primary text-white">
                   Upgrade to Pro
                 </Button>
               </div>

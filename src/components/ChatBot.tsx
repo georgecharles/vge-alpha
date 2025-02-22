@@ -35,11 +35,44 @@ interface Contact {
   unread_count?: number;
 }
 
+const formatMessage = (text: string) => {
+  // Replace **bold** with styled spans
+  let formattedText = text.replace(
+    /\*\*(.*?)\*\*/g,
+    '<span class="font-bold">$1</span>'
+  );
+  
+  // Replace *italic* with styled spans
+  formattedText = formattedText.replace(
+    /\*(.*?)\*/g,
+    '<span class="italic">$1</span>'
+  );
+  
+  // Replace bullet points
+  formattedText = formattedText.replace(
+    /^- (.+)$/gm,
+    '<span class="block ml-2">• $1</span>'
+  );
+  
+  // Replace numbered lists
+  formattedText = formattedText.replace(
+    /^\d+\. (.+)$/gm,
+    '<span class="block ml-2">$&</span>'
+  );
+
+  // Split by newlines and wrap in spans
+  return formattedText.split('\n').map((line, i) => (
+    line ? `<span class="block">${line}</span>` : '<span class="block h-2"></span>'
+  )).join('');
+};
+
 export function ChatBot() {
   const { user, profile } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
   const [activeTab, setActiveTab] = React.useState("ai");
-  const [messages, setMessages] = React.useState<Message[]>([]);
+  const [aiMessages, setAiMessages] = React.useState<Message[]>([]);
+  const [supportMessages, setSupportMessages] = React.useState<Message[]>([]);
+  const [directMessages, setDirectMessages] = React.useState<Message[]>([]);
   const [input, setInput] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
   const [contacts, setContacts] = React.useState<Contact[]>([]);
@@ -114,18 +147,17 @@ export function ChatBot() {
   };
 
   const handleSend = async (text: string) => {
-    console.log("handleSend called with text:", text);
     if (!text.trim()) return;
 
     if (activeTab === "ai") {
       // AI Assistant
-      setMessages((prev) => [...prev, { text, isUser: true }]);
+      setAiMessages((prev) => [...prev, { text, isUser: true }]);
       setInput("");
       setIsLoading(true);
 
       try {
         const response = await getChatResponse(text);
-        setMessages((prev) => [...prev, { text: response, isUser: false }]);
+        setAiMessages((prev) => [...prev, { text: response, isUser: false }]);
 
         // Store AI response in Supabase (sender_id will be null for AI)
         const { error: aiError } = await supabase.from("messages").insert([
@@ -151,6 +183,41 @@ export function ChatBot() {
       } finally {
         setIsLoading(false);
       }
+    } else if (activeTab === "support") {
+      // Handle support messages
+      setSupportMessages((prev) => [...prev, { text, isUser: true }]);
+      setInput("");
+
+      if (user) {
+        try {
+          // Store support message in Supabase
+          const { error } = await supabase.from("messages").insert([
+            {
+              sender_id: user.id,
+              receiver_id: "support", // You might want to use a specific support user ID
+              content: text,
+              is_support: true,
+            },
+          ]);
+
+          if (error) {
+            console.error("Error sending support message:", error);
+          }
+        } catch (error) {
+          console.error("Error sending support message:", error);
+        }
+      }
+
+      // You might want to add an automatic response or connect to a support system
+      setTimeout(() => {
+        setSupportMessages((prev) => [
+          ...prev,
+          {
+            text: "Thank you for your message. Our support team will get back to you soon.",
+            isUser: false,
+          },
+        ]);
+      }, 1000);
     } else {
       // Direct Message or Support
       if (!user || !selectedContact) return;
@@ -178,7 +245,7 @@ export function ChatBot() {
 
         console.log("Supabase insert success:", data); // Add this line
 
-        setMessages((prev) => [
+        setDirectMessages((prev) => [
           ...prev,
           {
             text,
@@ -205,7 +272,7 @@ export function ChatBot() {
 
   React.useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [aiMessages, supportMessages, directMessages]);
 
   React.useEffect(() => {
     scrollToBottom();
@@ -229,7 +296,7 @@ export function ChatBot() {
           console.log("Realtime message received:", payload); // Add this line
           const newMessage = payload.new;
           if (newMessage.sender_id !== user.id) {
-            setMessages((prev) => [
+            setDirectMessages((prev) => [
               ...prev,
               {
                 text: newMessage.content,
@@ -265,7 +332,7 @@ export function ChatBot() {
             exit={{ opacity: 0, y: 20 }}
             className="fixed bottom-20 right-4 w-full sm:w-[380px] md:w-[420px] max-w-[95vw] z-50"
           >
-            <Card className="overflow-hidden shadow-xl border-primary/20">
+            <Card className="overflow-hidden shadow-xl border-primary/20 bg-white">
               <Tabs defaultValue={activeTab} onValueChange={setActiveTab}>
                 <div className="p-4 border-b flex items-center justify-between bg-primary/5">
                   <TabsList>
@@ -295,12 +362,12 @@ export function ChatBot() {
                   </Button>
                 </div>
 
-                <TabsContent value="ai" className="m-0">
+                <TabsContent value="ai" className="m-0 bg-white">
                   <div
                     ref={scrollRef}
                     className="h-96 p-4 space-y-4 overflow-y-auto"
                   >
-                    {messages.length === 0 ? (
+                    {aiMessages.length === 0 ? (
                       <div className="space-y-4">
                         <p className="text-sm text-muted-foreground">
                           Hello! I'm your property assistant. Ask me anything
@@ -322,15 +389,24 @@ export function ChatBot() {
                         </div>
                       </div>
                     ) : (
-                      messages.map((message, index) => (
+                      aiMessages.map((message, index) => (
                         <div
                           key={index}
                           className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
                         >
                           <div
-                            className={`max-w-[80%] rounded-lg p-3 ${message.isUser ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                            className={`max-w-[80%] rounded-lg p-3 ${
+                              message.isUser
+                                ? "bg-primary text-primary-foreground"
+                                : "bg-muted"
+                            }`}
                           >
-                            <p className="text-sm">{message.text}</p>
+                            <p 
+                              className="text-sm whitespace-pre-wrap"
+                              dangerouslySetInnerHTML={{
+                                __html: message.isUser ? message.text : formatMessage(message.text)
+                              }}
+                            />
                           </div>
                         </div>
                       ))
@@ -343,9 +419,29 @@ export function ChatBot() {
                       </div>
                     )}
                   </div>
+                  <div className="p-4 border-t">
+                    <div className="flex gap-2">
+                      <Input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Ask me anything about property..."
+                        onKeyPress={(e) => {
+                          if (e.key === "Enter") {
+                            handleSend(input);
+                          }
+                        }}
+                      />
+                      <Button
+                        onClick={() => handleSend(input)}
+                        disabled={!input.trim()}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </TabsContent>
 
-                <TabsContent value="messages" className="m-0">
+                <TabsContent value="messages" className="m-0 bg-white">
                   <div
                     ref={scrollRef}
                     className="h-96 p-4 space-y-4 overflow-y-auto"
@@ -386,7 +482,7 @@ export function ChatBot() {
                                 </p>
                               </div>
                             </div>
-                            {contact.unread_count > 0 && (
+                            {contact.unread_count && contact.unread_count > 0 && (
                               <span className="bg-primary text-primary-foreground text-xs px-2 py-1 rounded-full">
                                 {contact.unread_count}
                               </span>
@@ -396,7 +492,7 @@ export function ChatBot() {
                       </div>
                     ) : (
                       <div className="space-y-4">
-                        {messages.map((message, index) => (
+                        {directMessages.map((message, index) => (
                           <div
                             key={index}
                             className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}
@@ -436,19 +532,19 @@ export function ChatBot() {
                   )}
                 </TabsContent>
 
-                <TabsContent value="support" className="m-0">
+                <TabsContent value="support" className="m-0 bg-white">
                   <div
                     ref={scrollRef}
                     className="h-96 p-4 space-y-4 overflow-y-auto"
                   >
-                    {messages.length === 0 ? (
+                    {supportMessages.length === 0 ? (
                       <div className="space-y-4">
                         <p className="text-sm text-muted-foreground">
                           Welcome to support! How can we help you today?
                         </p>
                       </div>
                     ) : (
-                      messages.map((message, index) => (
+                      supportMessages.map((message, index) => (
                         <div
                           key={index}
                           className={`flex ${message.isUser ? "justify-end" : "justify-start"}`}

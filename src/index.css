@@ -4,6 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+h1, h2 {
+  font-family: "Atkinson Hyperlegible", sans-serif;
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

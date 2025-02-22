@@ -5,7 +5,11 @@ import {
   fetchPropertyNews,
   generateMarketInsights,
   getLatestMarketInsights,
+  getRiskAssessment,
+  getPersonalizedOpportunities,
+  getPredictiveAnalytics,
 } from "../lib/market-insights";
+import { cn } from "../lib/utils";
 
 interface MarketInsightsProps {
   className?: string;
@@ -14,6 +18,8 @@ interface MarketInsightsProps {
 export function MarketInsights({ className }: MarketInsightsProps) {
   const [news, setNews] = React.useState<any[]>([]);
   const [insights, setInsights] = React.useState<string>("");
+  const [riskAssessment, setRiskAssessment] = React.useState<string>("No risk assessment data available.");
+  const [personalizedOpportunities, setPersonalizedOpportunities] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -35,8 +41,21 @@ export function MarketInsights({ className }: MarketInsightsProps) {
           );
           setInsights(newInsights);
         }
+
+        // Fetch risk assessment
+        const riskData = await getRiskAssessment();
+        setRiskAssessment(riskData);
+
+        // Fetch personalized investment opportunities
+        const opportunitiesData = await getPersonalizedOpportunities();
+        setPersonalizedOpportunities(opportunitiesData);
+
+        // Fetch predictive analytics
+        const predictiveData = await getPredictiveAnalytics();
+        // Handle predictive data as needed
       } catch (error) {
         console.error("Error loading market data:", error);
+        setError("Failed to load market data.");
       } finally {
         setLoading(false);
       }
@@ -70,7 +89,7 @@ export function MarketInsights({ className }: MarketInsightsProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       <Card>
         <CardHeader className="flex flex-row items-center gap-2">
           <TrendingUp className="w-5 h-5" />
@@ -113,6 +132,36 @@ export function MarketInsights({ className }: MarketInsightsProps) {
               </div>
             ))}
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Risk Assessment Card */}
+      <Card>
+        <CardHeader>
+          <h3 className="font-semibold">Risk Assessment</h3>
+        </CardHeader>
+        <CardContent>
+          <p className="text-muted-foreground">{riskAssessment || "No data available."}</p>
+        </CardContent>
+      </Card>
+
+      {/* Personalized Investment Opportunities Card */}
+      <Card>
+        <CardHeader>
+          <h3 className="font-semibold">Personalized Investment Opportunities</h3>
+        </CardHeader>
+        <CardContent>
+          {personalizedOpportunities.length > 0 ? (
+            <ul className="space-y-2">
+              {personalizedOpportunities.map((opportunity, index) => (
+                <li key={index} className="text-muted-foreground">
+                  {opportunity.description}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground">No personalized opportunities available.</p>
+          )}
         </CardContent>
       </Card>
     </div>

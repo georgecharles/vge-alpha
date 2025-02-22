@@ -128,3 +128,51 @@ export async function getLatestMarketInsights() {
     return null;
   }
 }
+
+export async function getRiskAssessment() {
+  try {
+    const response = await fetch(
+      `https://your-api-endpoint.com/risk-assessment?key=${import.meta.env.VITE_GEMINI_API_KEY}`
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data; // Ensure this returns a string or the expected format
+  } catch (error) {
+    console.error("Error fetching risk assessment:", error);
+    return "No risk assessment data available."; // Return a default message or value
+  }
+}
+
+export async function getPersonalizedOpportunities() {
+  try {
+    const response = await fetch(
+      `https://your-api-endpoint.com/personalized-opportunities?key=${import.meta.env.VITE_GEMINI_API_KEY}`
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data; // Ensure this returns an array of opportunities
+  } catch (error) {
+    console.error("Error fetching personalized opportunities:", error);
+    return []; // Return an empty array as a fallback
+  }
+}
+
+export async function getPredictiveAnalytics() {
+  try {
+    const response = await fetch(
+      `https://your-api-endpoint.com/predictive-analytics?key=${import.meta.env.VITE_GEMINI_API_KEY}`
+    );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const data = await response.json();
+    return data; // Ensure this returns the expected format
+  } catch (error) {
+    console.error("Error fetching predictive analytics:", error);
+    return {}; // Return an empty object or default value
+  }
+}

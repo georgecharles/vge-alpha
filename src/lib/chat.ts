@@ -56,3 +56,136 @@ User question: ${message}`,
     return "I'm sorry, I'm having trouble processing your request right now. Please try again later.";
   }
 }
+
+export const formatMessage = (text: string) => {
+  // Replace **bold** with styled spans
+  let formattedText = text.replace(
+    /\*\*(.*?)\*\*/g,
+    '<span class="font-bold">$1</span>'
+  );
+  
+  // Replace *italic* with styled spans
+  formattedText = formattedText.replace(
+    /\*(.*?)\*/g,
+    '<span class="italic">$1</span>'
+  );
+  
+  // Replace bullet points
+  formattedText = formattedText.replace(
+    /^- (.+)$/gm,
+    '<span class="block ml-2">• $1</span>'
+  );
+  
+  // Replace numbered lists
+  formattedText = formattedText.replace(
+    /^\d+\. (.+)$/gm,
+    '<span class="block ml-2">$&</span>'
+  );
+
+  // Split by newlines and wrap in spans
+  return formattedText.split('\n').map((line, i) => (
+    line ? `<span class="block">${line}</span>` : '<span class="block h-2"></span>'
+  )).join('');
+};
+
+export async function getPredictiveAnalytics() {
+  try {
+    const response = await getChatResponse(`
+      Analyze and predict the UK property market trends. Return the data in the following JSON format only:
+      {
+        "regions": [
+          {
+            "region": "London",
+            "currentValue": 500000,
+            "predictedValue": 525000,
+            "confidence": 85,
+            "growthFactors": [
+              "Strong employment market",
+              "Infrastructure developments",
+              "High rental demand"
+            ]
+          }
+        ]
+      }
+      Include predictions for: London, South East, North West, Scotland, Wales.
+      Base predictions on current market data and trends.
+      Ensure values are realistic and growth factors are specific.
+      Return ONLY the JSON, no additional text.
+    `);
+
+    try {
+      // Clean the response to ensure it's valid JSON
+      const cleanedResponse = response.trim().replace(/```json|```/g, '');
+      return JSON.parse(cleanedResponse);
+    } catch (e) {
+      console.error("Failed to parse predictive data:", e);
+      // Return fallback data
+      return {
+        regions: [
+          {
+            region: "London",
+            currentValue: 500000,
+            predictedValue: 525000,
+            confidence: 85,
+            growthFactors: ["Strong market fundamentals", "High demand", "Limited supply"]
+          },
+          // Add more fallback regions...
+        ]
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching predictive analytics:", error);
+    return { regions: [] };
+  }
+}
+
+export async function getInvestmentHotspots() {
+  try {
+    const response = await getChatResponse(`
+      Identify the top UK property investment hotspots. Return the data in the following JSON format only:
+      {
+        "hotspots": [
+          {
+            "area": "Manchester",
+            "score": 85,
+            "factors": [
+              "Strong student population",
+              "Growing tech sector",
+              "Improved transport links"
+            ],
+            "predictedGrowth": 7.5,
+            "investmentType": "Residential"
+          }
+        ]
+      }
+      Include 5 top hotspots.
+      Base analysis on economic indicators, infrastructure projects, and population trends.
+      Investment types should be one of: "Residential", "Commercial", or "Mixed".
+      Return ONLY the JSON, no additional text.
+    `);
+
+    try {
+      // Clean the response to ensure it's valid JSON
+      const cleanedResponse = response.trim().replace(/```json|```/g, '');
+      return JSON.parse(cleanedResponse);
+    } catch (e) {
+      console.error("Failed to parse hotspots data:", e);
+      // Return fallback data
+      return {
+        hotspots: [
+          {
+            area: "Manchester",
+            score: 85,
+            factors: ["Strong economy", "University presence", "Infrastructure investment"],
+            predictedGrowth: 7.5,
+            investmentType: "Residential"
+          },
+          // Add more fallback hotspots...
+        ]
+      };
+    }
+  } catch (error) {
+    console.error("Error fetching hotspots:", error);
+    return { hotspots: [] };
+  }
+}

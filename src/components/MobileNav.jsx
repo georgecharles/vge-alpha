@@ -13,7 +13,8 @@ export function MobileNav({ isOpen, onClose, children }) {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="fixed inset-0 z-50 bg-background lg:hidden"
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm lg:hidden"
+          style={{ width: '100vw' }}
         >
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -21,11 +22,12 @@ export function MobileNav({ isOpen, onClose, children }) {
             exit={{ opacity: 0, y: 20 }}
             transition={{ duration: 0.2, delay: 0.1 }}
             className={cn(
-              "fixed inset-0 bg-gradient-to-b from-background/90 via-background/50 to-background/90 backdrop-blur-xl",
-              "flex flex-col overflow-y-auto pb-12",
+              "fixed inset-0 bg-white",
+              "flex flex-col overflow-y-auto"
             )}
+            style={{ width: '100vw' }}
           >
-            <div className="flex h-16 items-center justify-between px-6 pt-4">
+            <div className="flex h-16 items-center justify-between px-4">
               <a href="/" className="hover:opacity-80 transition-opacity">
                 <img
                   src="https://i.postimg.cc/GpdY6N74/my-1920-x-1080-px-1.png"
@@ -41,7 +43,7 @@ export function MobileNav({ isOpen, onClose, children }) {
                 <X className="h-6 w-6" />
               </Button>
             </div>
-            <div className="flex-1 px-6 pt-10">{children}</div>
+            <div className="flex-1 px-4 pb-12">{children}</div>
           </motion.div>
         </motion.div>
       )}

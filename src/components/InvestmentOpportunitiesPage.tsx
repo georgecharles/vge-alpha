@@ -4,6 +4,7 @@ import HeroSection from "./HeroSection";
 import { Layout } from "./Layout";
 import { PageTransition } from "./ui/page-transition";
 import { Button } from "./ui/button";
+import { getTailoredRecommendations, simulateInvestmentScenario } from "../lib/investment-api";
 
 const investmentOpportunities = [
   {
@@ -21,6 +22,43 @@ const investmentOpportunities = [
 ];
 
 export default function InvestmentOpportunitiesPage() {
+  const [tailoredRecommendations, setTailoredRecommendations] = React.useState<any[]>([]);
+  const [simulationResults, setSimulationResults] = React.useState<any>(null);
+  const [loadingRecommendations, setLoadingRecommendations] = React.useState(true);
+  const [loadingSimulation, setLoadingSimulation] = React.useState(false);
+
+  React.useEffect(() => {
+    const loadRecommendations = async () => {
+      setLoadingRecommendations(true);
+      try {
+        const recommendations = await getTailoredRecommendations();
+        setTailoredRecommendations(recommendations);
+      } catch (error) {
+        console.error("Error fetching tailored recommendations:", error);
+      } finally {
+        setLoadingRecommendations(false);
+      }
+    };
+
+    loadRecommendations();
+  }, []);
+
+  const handleSimulateScenario = async () => {
+    setLoadingSimulation(true);
+    try {
+      const result = await simulateInvestmentScenario({
+        initialInvestment: 10000,
+        duration: 5,
+        riskLevel: "medium",
+      });
+      setSimulationResults(result);
+    } catch (error) {
+      console.error("Error simulating investment scenario:", error);
+    } finally {
+      setLoadingSimulation(false);
+    }
+  };
+
   return (
     <PageTransition>
       <Layout>
@@ -56,13 +94,38 @@ export default function InvestmentOpportunitiesPage() {
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-2xl font-semibold">Investment Strategies</h2>
+              <h2 className="text-2xl font-semibold">Tailored Recommendations for Fractional Ownership</h2>
+              {loadingRecommendations ? (
+                <p>Loading recommendations...</p>
+              ) : (
+                <ul className="list-disc list-inside">
+                  {tailoredRecommendations.length > 0 ? (
+                    tailoredRecommendations.map((rec, index) => (
+                      <li key={index}>
+                        <strong>{rec.title}</strong>: {rec.description}
+                      </li>
+                    ))
+                  ) : (
+                    <p>No tailored recommendations available.</p>
+                  )}
+                </ul>
+              )}
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="text-2xl font-semibold">Scenario Modeling</h2>
               <p>
-                We offer a variety of investment strategies to suit your
-                individual goals and risk tolerance. Whether you're looking for
-                long-term capital appreciation or steady rental income, we have
-                the expertise to help you succeed.
+                Simulate different investment outcomes based on your preferences.
               </p>
+              <Button onClick={handleSimulateScenario} disabled={loadingSimulation}>
+                {loadingSimulation ? "Simulating..." : "Simulate Investment Scenario"}
+              </Button>
+              {simulationResults && (
+                <div className="mt-4">
+                  <h3 className="font-semibold">Simulation Results</h3>
+                  <p>{JSON.stringify(simulationResults, null, 2)}</p>
+                </div>
+              )}
             </section>
 
             <section className="space-y-4">

@@ -13,6 +13,8 @@ import { useAuth } from "../lib/auth";
 import { searchProperties, getFeaturedProperties, Property } from "../lib/properties";
 import { Marquee } from "./ui/Marquee";
 import { cn } from "../lib/utils";
+import SpotlightCard from './SpotlightCard';
+import { LiquidChrome } from "./LiquidChrome";
 
 type AuthMode = "signin" | "signup";
 
@@ -243,9 +245,7 @@ const Home = () => {
         <section className="w-full py-12 bg-background">
           <div className="container mx-auto text-center mb-8">
             <h2 className="text-3xl font-bold mb-4">Trusted by Industry Leaders</h2>
-            <p className="text-muted-foreground">
-              Join the leading property investment professionals who trust our platform
-            </p>
+  
           </div>
           <div className="relative flex h-96 w-full flex-row items-center justify-center gap-4 overflow-hidden [perspective:300px]">
             <div
@@ -293,13 +293,41 @@ const Home = () => {
         </div>
 
         {(!profile || profile.subscription_tier === "free") && (
-          <SubscriptionCTA
-            onSubscribe={() => setIsSubscriptionModalOpen(true)}
-            title="Unlock Premium Property Insights"
-            description="Get access to detailed property analysis, market comparisons, and investment metrics to make informed decisions."
-          />
+          <div className="w-full bg-background py-16">
+            <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+              <div className="relative w-full rounded-3xl overflow-hidden">
+                {/* LiquidChrome Background */}
+                <div className="absolute inset-0">
+                  <LiquidChrome
+                    baseColor={[0.1, 0.1, 0.1]}
+                    speed={1}
+                    amplitude={0.6}
+                    interactive={true}
+                  />
+                </div>
+                
+                {/* Background Overlay with Blur */}
+                <div className="absolute inset-0 bg-black/40 backdrop-blur-[8px]" />
+                
+                {/* Content */}
+                <div className="relative z-10 text-center py-12 px-8">
+                  <h2 className="text-3xl font-bold mb-4 text-white">
+                    Unlock Premium Property Insights
+                  </h2>
+                  <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+                    Get access to detailed property analysis, market comparisons, and investment metrics to make informed decisions.
+                  </p>
+                  <button
+                    onClick={() => setIsSubscriptionModalOpen(true)}
+                    className="px-8 py-3 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  >
+                    Upgrade Now
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
-
 
       </main>
 

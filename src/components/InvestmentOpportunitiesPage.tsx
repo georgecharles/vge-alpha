@@ -43,17 +43,30 @@ export default function InvestmentOpportunitiesPage() {
     try {
       // Execute each API call separately for better error handling
       const analysisData = await getInvestmentAnalysis(propertyType, budget);
+      if (!analysisData || typeof analysisData !== 'object') {
+        throw new Error('Invalid analysis data received');
+      }
       setAnalysis(analysisData);
 
       const predictionsData = await getMarketPredictions(location);
+      if (!predictionsData || typeof predictionsData !== 'object') {
+        throw new Error('Invalid predictions data received');
+      }
       setPredictions(predictionsData);
 
       const strategyData = await getInvestmentStrategy(investorProfile);
+      if (!strategyData || typeof strategyData !== 'object') {
+        throw new Error('Invalid strategy data received');
+      }
       setStrategy(strategyData);
 
     } catch (error) {
       console.error("Error in analysis:", error);
       setError(error instanceof Error ? error.message : "Failed to generate analysis. Please try again.");
+      // Clear any partial results
+      setAnalysis(null);
+      setPredictions(null);
+      setStrategy(null);
     } finally {
       setLoading(false);
     }
@@ -147,26 +160,38 @@ export default function InvestmentOpportunitiesPage() {
                   <CardContent className="space-y-4">
                     <div>
                       <h4 className="font-semibold">Analysis</h4>
-                      <p className="text-sm text-muted-foreground">{analysis.analysis}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {analysis.analysis || "Analysis not available"}
+                      </p>
                     </div>
                     <div>
                       <h4 className="font-semibold">ROI Range</h4>
-                      <p className="text-sm text-muted-foreground">{analysis.roi_range}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {analysis.roi_range || "ROI range not available"}
+                      </p>
                     </div>
                     <div>
                       <h4 className="font-semibold">Risks</h4>
                       <ul className="list-disc pl-4 text-sm text-muted-foreground">
-                        {analysis.risks.map((risk: string, i: number) => (
-                          <li key={i}>{risk}</li>
-                        ))}
+                        {Array.isArray(analysis.risks) ? (
+                          analysis.risks.map((risk: string, i: number) => (
+                            <li key={i}>{risk}</li>
+                          ))
+                        ) : (
+                          <li>Risks data not available</li>
+                        )}
                       </ul>
                     </div>
                     <div>
                       <h4 className="font-semibold">Market Trends</h4>
                       <ul className="list-disc pl-4 text-sm text-muted-foreground">
-                        {analysis.market_trends.map((trend: string, i: number) => (
-                          <li key={i}>{trend}</li>
-                        ))}
+                        {Array.isArray(analysis.market_trends) ? (
+                          analysis.market_trends.map((trend: string, i: number) => (
+                            <li key={i}>{trend}</li>
+                          ))
+                        ) : (
+                          <li>Market trends not available</li>
+                        )}
                       </ul>
                     </div>
                   </CardContent>
@@ -181,14 +206,20 @@ export default function InvestmentOpportunitiesPage() {
                   <CardContent className="space-y-2">
                     <div>
                       <h4 className="font-semibold">Price Trend</h4>
-                      <p>{predictions.price_prediction}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {predictions.price_prediction || "Price prediction not available"}
+                      </p>
                     </div>
                     <div>
                       <h4 className="font-semibold">Demand Factors</h4>
-                      <ul className="list-disc pl-4">
-                        {predictions.demand_factors.map((factor: string, i: number) => (
-                          <li key={i}>{factor}</li>
-                        ))}
+                      <ul className="list-disc pl-4 text-sm text-muted-foreground">
+                        {Array.isArray(predictions.demand_factors) ? (
+                          predictions.demand_factors.map((factor: string, i: number) => (
+                            <li key={i}>{factor}</li>
+                          ))
+                        ) : (
+                          <li>Demand factors not available</li>
+                        )}
                       </ul>
                     </div>
                   </CardContent>
@@ -203,15 +234,21 @@ export default function InvestmentOpportunitiesPage() {
                   <CardContent className="space-y-2">
                     <div>
                       <h4 className="font-semibold">Portfolio Allocation</h4>
-                      <p>{strategy.portfolio_allocation}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {strategy.portfolio_allocation || "Portfolio allocation not available"}
+                      </p>
                     </div>
                     <div>
                       <h4 className="font-semibold">Expected Returns</h4>
-                      <p>{strategy.expected_returns}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {strategy.expected_returns || "Expected returns not available"}
+                      </p>
                     </div>
                     <div>
                       <h4 className="font-semibold">Timeline</h4>
-                      <p>{strategy.timeline}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {strategy.timeline || "Timeline not available"}
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

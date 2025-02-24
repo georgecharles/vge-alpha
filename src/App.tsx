@@ -33,6 +33,7 @@ import AuthCallback from "./components/AuthCallback";
 import PropertyManagementPage from "./components/PropertyManagementPage";
 import InvestmentOpportunitiesPage from "./components/InvestmentOpportunitiesPage";
 import AboutUsPage from "./components/AboutUsPage";
+import { Deals } from "./components/Deals";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -66,7 +67,7 @@ function AppContent() {
         <Suspense fallback={<Loading />}>
           <Routes location={location}>
             <Route path="/" element={<Home />} />
-            <Route path="/deals" element={<FeaturedProperties />} />
+            <Route path="/deals" element={<Deals />} />
             <Route
               path="/dashboard"
               element={

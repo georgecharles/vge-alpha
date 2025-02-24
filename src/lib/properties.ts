@@ -17,20 +17,22 @@ export interface Property {
   is_premium: boolean;
 }
 
-export async function getFeaturedProperties(): Promise<Property[]> {
+export const getFeaturedProperties = async (page = 1, limit = 6) => {
+  const start = (page - 1) * limit;
+  
   const { data, error } = await supabase
     .from('properties')
     .select('*')
-    .order('created_at', { ascending: false })
-    .limit(6);
+    .range(start, start + limit - 1)
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Error fetching featured properties:', error);
-    return [];
+    console.error('Error fetching properties:', error);
+    throw error;
   }
 
   return data || [];
-}
+};
 
 export async function searchProperties(searchTerm: string): Promise<Property[]> {
   const { data, error } = await supabase

@@ -6,7 +6,7 @@ import SplitText from "./ui/SplitText";
 import Aurora from "./ui/Aurora";
 
 interface HeroSectionProps {
-  onSearch?: (searchTerm: string) => void;
+  onSearch: (term: string) => void;
   title?: string;
   subtitle?: string;
   showSearch?: boolean;
@@ -14,10 +14,10 @@ interface HeroSectionProps {
   height?: string;
 }
 
-const HeroSection = ({
-  onSearch = () => {},
-  title = "Find Your Perfect Property",
-  subtitle = "Search through millions of properties to find your next home",
+export const HeroSection: React.FC<HeroSectionProps> = ({
+  onSearch,
+  title = "Find Your Next Investment Property",
+  subtitle = "Search through thousands of investment opportunities",
   showSearch = true,
   height = "h-[500px]",
 }: HeroSectionProps) => {

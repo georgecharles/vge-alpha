@@ -14,6 +14,8 @@ import { searchProperties, getFeaturedProperties, Property } from "../lib/proper
 import { Marquee } from "./ui/Marquee";
 import { cn } from "../lib/utils";
 
+type AuthMode = "signin" | "signup";
+
 const reviews = [
   {
     name: "Savills",
@@ -83,22 +85,48 @@ const Home = () => {
   const [authMode, setAuthMode] = React.useState("signin");
   const [isMessagesModalOpen, setIsMessagesModalOpen] = React.useState(false);
   const [selectedReceiverId, setSelectedReceiverId] = React.useState();
+  const [page, setPage] = React.useState(1);
+  const [hasMore, setHasMore] = React.useState(true);
+  const PROPERTIES_PER_PAGE = 6;
+  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
 
-  const loadFeaturedProperties = async () => {
-    setIsSearching(true);
+  const loadFeaturedProperties = async (pageNum = 1) => {
+    if (pageNum === 1) {
+      setIsSearching(true);
+    } else {
+      setIsLoadingMore(true);
+    }
+    
     try {
-      const properties = await getFeaturedProperties();
-      setSearchResults(properties.map(p => ({
-        ...p,
-        bedroom: p.bedrooms,
-        bathroom: p.bathrooms,
-        property_type: p.property_type
-      })));
+      const properties = await getFeaturedProperties(pageNum, PROPERTIES_PER_PAGE);
+      if (pageNum === 1) {
+        setSearchResults(properties.map(p => ({
+          ...p,
+          bedroom: p.bedrooms,
+          bathroom: p.bathrooms,
+          property_type: p.property_type
+        })));
+      } else {
+        setSearchResults(prev => [...prev, ...properties.map(p => ({
+          ...p,
+          bedroom: p.bedrooms,
+          bathroom: p.bathrooms,
+          property_type: p.property_type
+        }))]);
+      }
+      setHasMore(properties.length === PROPERTIES_PER_PAGE);
     } catch (error) {
       console.error("Error loading featured properties:", error);
     } finally {
       setIsSearching(false);
+      setIsLoadingMore(false);
     }
+  };
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    loadFeaturedProperties(nextPage);
   };
 
   React.useEffect(() => {
@@ -167,8 +195,8 @@ const Home = () => {
         <div className="w-full bg-background py-8">
           <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
             <h2 className="text-2xl font-bold mb-6">Featured Properties</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
-              {isSearching ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+              {isSearching && page === 1 ? (
                 Array(3).fill(0).map((_, i) => (
                   <div
                     key={i}
@@ -194,6 +222,18 @@ const Home = () => {
                 ))
               )}
             </div>
+            
+            {hasMore && (
+              <div className="flex justify-center mb-16">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="px-6 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoadingMore ? 'Loading...' : 'Load More'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

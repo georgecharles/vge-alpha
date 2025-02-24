@@ -1,6 +1,15 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+// Import type only to avoid build issues
+import type { GoogleGenerativeAI } from "@google/generative-ai";
 
-const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+let genAI: GoogleGenerativeAI;
+
+async function initializeAI() {
+  if (!genAI) {
+    const { GoogleGenerativeAI } = await import("@google/generative-ai");
+    genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+  }
+  return genAI;
+}
 
 function sanitizeJsonString(str: string): string {
   // Find the first { and last } to extract just the JSON object
@@ -11,7 +20,8 @@ function sanitizeJsonString(str: string): string {
 }
 
 export async function getInvestmentAnalysis(propertyType: string, budget: number) {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const ai = await initializeAI();
+  const model = ai.getGenerativeModel({ model: "gemini-pro" });
 
   const prompt = `
     You are a UK property investment expert. Analyze investment opportunities for ${propertyType} properties with a budget of £${budget}.
@@ -44,7 +54,8 @@ export async function getInvestmentAnalysis(propertyType: string, budget: number
 }
 
 export async function getMarketPredictions(location: string) {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const ai = await initializeAI();
+  const model = ai.getGenerativeModel({ model: "gemini-pro" });
 
   const prompt = `
     You are a UK property market expert. Predict property market trends for ${location} in the next 12 months.
@@ -73,7 +84,8 @@ export async function getMarketPredictions(location: string) {
 }
 
 export async function getInvestmentStrategy(investorProfile: any) {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+  const ai = await initializeAI();
+  const model = ai.getGenerativeModel({ model: "gemini-pro" });
 
   const prompt = `
     You are a UK property investment advisor. Create a strategy for a ${investorProfile.experience} investor with £${investorProfile.budget} budget and ${investorProfile.riskTolerance} risk tolerance.

@@ -7,7 +7,7 @@ export default defineConfig({
   base: "/",
   optimizeDeps: {
     entries: ["src/main.tsx", "src/tempobook/**/*"],
-    include: ["react", "react-dom", "react/jsx-runtime"],
+    include: ["react", "react-dom", "react/jsx-runtime", "@google/generative-ai"],
     force: true,
   },
   plugins: [
@@ -44,6 +44,9 @@ export default defineConfig({
         },
       },
     },
+    commonjsOptions: {
+      include: [/@google\/generative-ai/, /node_modules/]
+    }
   },
   define: {
     "process.env": {},

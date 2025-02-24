@@ -43,6 +43,7 @@ export interface Database {
       };
       properties: {
         Row: {
+          property_type: any;
           id: string;
           address: string;
           city: string;

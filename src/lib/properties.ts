@@ -1,41 +1,50 @@
 import { supabase } from "./supabase";
 import type { Property, SavedProperty } from "../types/database";
 
-export async function getFeaturedProperties() {
-  const { data, error } = await supabase
-    .from("properties")
-    .select(
-      `
-      *,
-      assigned_user:profiles!properties_assigned_user_id_fkey(id, full_name, email),
-      author:profiles!properties_created_by_fkey(id, full_name, email)
-    `,
-    )
-    .order("created_at", { ascending: false })
-    .limit(20);
-
-  if (error) throw error;
-  return (
-    data?.map((property) => ({
-      ...property,
-      images: property.images || [
-        `https://images.unsplash.com/photo-1560518883-ce09059eeffa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600`,
-      ],
-    })) || []
-  );
+export interface Property {
+  id: string;
+  address: string;
+  price: number;
+  bedroom: number;
+  bathroom: number;
+  images: string[];
+  description: string;
+  property_type: string;
+  created_at: string;
+  city: string;
+  postcode: string;
+  square_footage: number;
+  is_premium: boolean;
 }
 
-export async function searchProperties(searchTerm: string) {
+export async function getFeaturedProperties(): Promise<Property[]> {
   const { data, error } = await supabase
-    .from("properties")
-    .select("*")
-    .or(
-      `address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,postcode.ilike.%${searchTerm}%`,
-    )
-    .limit(20);
+    .from('properties')
+    .select('*')
+    .order('created_at', { ascending: false })
+    .limit(6);
 
-  if (error) throw error;
-  return data as Property[];
+  if (error) {
+    console.error('Error fetching featured properties:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
+export async function searchProperties(searchTerm: string): Promise<Property[]> {
+  const { data, error } = await supabase
+    .from('properties')
+    .select('*')
+    .or(`address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,postcode.ilike.%${searchTerm}%`)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching properties:', error);
+    return [];
+  }
+
+  return data || [];
 }
 
 export async function getProperty(id: string) {

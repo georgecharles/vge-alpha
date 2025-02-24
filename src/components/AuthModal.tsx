@@ -68,7 +68,7 @@ export function AuthModal({
         const pendingPriceId = localStorage.getItem(
           "pending_subscription_price_id",
         );
-        if (pendingPriceId && user) {
+        if (pendingPriceId && user && 'id' in user) {
           localStorage.removeItem("pending_subscription_price_id");
           await createCheckoutSession(pendingPriceId, user.id);
         } else {

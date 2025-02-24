@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { MessageCircle, Lock } from "lucide-react";
 import { BitcoinPrice } from "./BitcoinPrice";
+import { formatCurrency } from "../lib/utils";
 
 const PROPERTY_FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
@@ -36,26 +37,9 @@ interface PropertyCardProps {
   roi_percentage?: number;
   images?: string[];
   onMessageAuthor?: (authorId: string) => void;
-}
-
-interface PropertyCardProps {
-  id?: string;
-  address?: string;
-  price?: number;
-  squareFootage?: number;
-  bedrooms?: number;
-  bathrooms?: number;
-  isPremium?: boolean;
-  isSubscriber?: boolean;
-  assignedUser?: any;
-  author?: any;
-  type?: string;
-  status?: string;
-  potential_profit?: number;
-  roi_percentage?: number;
-  images?: string[];
-  onMessageAuthor?: (authorId: string) => void;
-  onClick?: () => void;
+  description: string;
+  propertyType: string;
+  createdAt: string;
 }
 
 const PropertyCard = ({
@@ -76,14 +60,36 @@ const PropertyCard = ({
   images = [],
   onMessageAuthor,
   onClick,
+  description,
+  propertyType,
+  createdAt,
 }: PropertyCardProps) => {
   const [isImageLoading, setIsImageLoading] = React.useState(true);
+  const [btcPrice, setBtcPrice] = useState<number | null>(null);
 
   const fallbackImage = React.useMemo(() => {
     const fallbackImages =
       type === "deal" ? DEAL_FALLBACK_IMAGES : PROPERTY_FALLBACK_IMAGES;
     return fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
   }, [type]);
+
+  useEffect(() => {
+    const fetchBtcPrice = async () => {
+      try {
+        const response = await fetch('https://api.coindesk.com/v1/bpi/currentprice/GBP.json');
+        const data = await response.json();
+        const btcToGbp = data.bpi.GBP.rate_float;
+        setBtcPrice(price / btcToGbp);
+      } catch (error) {
+        console.error('Error fetching BTC price:', error);
+      }
+    };
+
+    fetchBtcPrice();
+    const interval = setInterval(fetchBtcPrice, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [price]);
 
   return (
     <Card
@@ -123,7 +129,12 @@ const PropertyCard = ({
           <h3 className="font-semibold mb-1 line-clamp-1">{address}</h3>
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold">
-              £{price.toLocaleString()}
+              {formatCurrency(price)}
+              {btcPrice && (
+                <span className="text-sm text-muted-foreground ml-2">
+                  ≈ {btcPrice.toFixed(8)} BTC
+                </span>
+              )}
             </span>
             <BitcoinPrice amount={price} />
           </div>
@@ -164,6 +175,21 @@ const PropertyCard = ({
             )}
           </div>
         )}
+
+        <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <span>{propertyType}</span>
+          <span>{bedrooms} beds</span>
+          <span>{bathrooms} baths</span>
+          <span>{squareFootage} sq ft</span>
+        </div>
+
+        <p className="text-sm text-muted-foreground line-clamp-2">
+          {description}
+        </p>
+
+        <p className="text-xs text-muted-foreground">
+          Listed {new Date(createdAt).toLocaleDateString()}
+        </p>
 
         {author && onMessageAuthor && (
           <Button

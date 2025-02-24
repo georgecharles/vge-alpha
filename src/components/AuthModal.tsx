@@ -57,7 +57,7 @@ export function AuthModal({
           setTimeout(() => onClose(), 500);
         }
       } else {
-        const { user } = await signUp(
+        const user = await signUp(
           formData.email,
           formData.password,
           formData.firstName,

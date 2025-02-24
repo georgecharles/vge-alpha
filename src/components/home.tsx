@@ -11,7 +11,68 @@ import { Footer } from "./Footer";
 import { LegalDisclaimer } from "./LegalDisclaimer";
 import { PartnersCarousel } from "./PartnersCarousel";
 import { useAuth } from "../lib/auth";
-import { searchProperties, getFeaturedProperties } from "../lib/properties";
+import { searchProperties } from "../lib/properties";
+import { Marquee } from "./ui/Marquee";
+import { cn } from "../lib/utils";
+
+const reviews = [
+  {
+    name: "Savills",
+    username: "@savills",
+    body: "Leading the way in property investment and market analysis.",
+    img: "https://avatar.vercel.sh/savills",
+  },
+  {
+    name: "Knight Frank",
+    username: "@knightfrank",
+    body: "Exceptional platform for property investment insights.",
+    img: "https://avatar.vercel.sh/knightfrank",
+  },
+  {
+    name: "JLL",
+    username: "@jll",
+    body: "Revolutionary approach to property investment analytics.",
+    img: "https://avatar.vercel.sh/jll",
+  },
+];
+
+const firstRow = reviews.slice(0, reviews.length / 2);
+const secondRow = reviews.slice(reviews.length / 2);
+const thirdRow = reviews.slice(0, reviews.length / 2);
+const fourthRow = reviews.slice(reviews.length / 2);
+
+const ReviewCard = ({
+  img,
+  name,
+  username,
+  body,
+}: {
+  img: string;
+  name: string;
+  username: string;
+  body: string;
+}) => {
+  return (
+    <figure
+      className={cn(
+        "relative h-full w-36 cursor-pointer overflow-hidden rounded-xl border p-4",
+        "border-gray-950/[.1] bg-gray-950/[.01] hover:bg-gray-950/[.05]",
+        "dark:border-gray-50/[.1] dark:bg-gray-50/[.10] dark:hover:bg-gray-50/[.15]",
+      )}
+    >
+      <div className="flex flex-row items-center gap-2">
+        <img className="rounded-full" width="32" height="32" alt="" src={img} />
+        <div className="flex flex-col">
+          <figcaption className="text-sm font-medium dark:text-white">
+            {name}
+          </figcaption>
+          <p className="text-xs font-medium dark:text-white/40">{username}</p>
+        </div>
+      </div>
+      <blockquote className="mt-2 text-sm">{body}</blockquote>
+    </figure>
+  );
+};
 
 const Home = () => {
   const { user, profile, signOut } = useAuth();
@@ -144,17 +205,16 @@ const Home = () => {
   React.useEffect(() => {
     loadFeaturedProperties();
 
-    const handleOpenAuthModal = (e) => {
+    const handleOpenAuthModal = (e: CustomEvent<{mode: string}>) => {
       setAuthMode(e.detail.mode);
       setIsAuthModalOpen(true);
     };
-
-    const handleOpenMessages = (e) => {
+    const handleOpenMessages = (e: CustomEvent<{receiverId: string}>) => {
       setSelectedReceiverId(e.detail.receiverId);
       setIsMessagesModalOpen(true);
     };
 
-    window.addEventListener("open-auth-modal", handleOpenAuthModal);
+    window.addEventListener("open-auth-modal", handleOpenAuthModal as EventListener);
     window.addEventListener("open-messages", handleOpenMessages);
 
     return () => {
@@ -163,7 +223,7 @@ const Home = () => {
     };
   }, []);
 
-  const handleSearch = async (term) => {
+  const handleSearch = async (term: string) => {
     setIsSearching(true);
     try {
       const results = await searchProperties(term);
@@ -222,7 +282,13 @@ const Home = () => {
                         className="w-full h-[420px] bg-muted rounded-lg animate-pulse"
                       />
                     ))
-                : searchResults.map((property) => (
+                : searchResults.map((property: {
+                    id: string;
+                    address: string;
+                    price: number;
+                    squareFootage: number;
+                    isPremium: boolean;
+                  }) => (
                     <PropertyCard
                       key={property.id}
                       address={property.address}
@@ -230,7 +296,7 @@ const Home = () => {
                       squareFootage={property.squareFootage}
                       isPremium={property.isPremium}
                       isSubscriber={profile?.subscription_tier !== "free"}
-                    />
+                      />
                   ))}
             </div>
           </div>
@@ -255,6 +321,51 @@ const Home = () => {
             description="Get access to detailed property analysis, market comparisons, and investment metrics to make informed decisions."
           />
         )}
+
+        {/* Trusted by Industry Leaders Section */}
+        <section className="w-full py-12 bg-background">
+          <div className="container mx-auto text-center mb-8">
+            <h2 className="text-3xl font-bold mb-4">Trusted by Industry Leaders</h2>
+            <p className="text-muted-foreground">
+              Join the leading property investment professionals who trust our platform
+            </p>
+          </div>
+          <div className="relative flex h-96 w-full flex-row items-center justify-center gap-4 overflow-hidden [perspective:300px]">
+            <div
+              className="flex flex-row items-center gap-4"
+              style={{
+                transform:
+                  "translateX(-100px) translateY(0px) translateZ(-100px) rotateX(20deg) rotateY(-10deg) rotateZ(20deg)",
+              }}
+            >
+              <Marquee pauseOnHover vertical className="[--duration:20s]">
+                {firstRow.map((review) => (
+                  <ReviewCard key={review.username} {...review} />
+                ))}
+              </Marquee>
+              <Marquee reverse pauseOnHover className="[--duration:20s]" vertical>
+                {secondRow.map((review) => (
+                  <ReviewCard key={review.username} {...review} />
+                ))}
+              </Marquee>
+              <Marquee reverse pauseOnHover className="[--duration:20s]" vertical>
+                {thirdRow.map((review) => (
+                  <ReviewCard key={review.username} {...review} />
+                ))}
+              </Marquee>
+              <Marquee pauseOnHover className="[--duration:20s]" vertical>
+                {fourthRow.map((review) => (
+                  <ReviewCard key={review.username} {...review} />
+                ))}
+              </Marquee>
+            </div>
+
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-background"></div>
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/4 bg-gradient-to-t from-background"></div>
+            <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-background"></div>
+            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-background"></div>
+          </div>
+        </section>
       </main>
 
       <Footer />
@@ -262,7 +373,7 @@ const Home = () => {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        defaultMode={authMode}
+        defaultMode={authMode as AuthMode}
       />
 
       <SubscriptionModal

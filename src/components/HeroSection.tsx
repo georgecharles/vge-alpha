@@ -2,10 +2,11 @@ import React from "react";
 import { Input } from "./ui/input";
 import { Button } from "./ui/button";
 import { Search } from "lucide-react";
+import SplitText from "./ui/SplitText";
+import Aurora from "./ui/Aurora";
 
 interface HeroSectionProps {
   onSearch?: (searchTerm: string) => void;
-  backgroundImage?: string;
   title?: string;
   subtitle?: string;
   showSearch?: boolean;
@@ -15,11 +16,9 @@ interface HeroSectionProps {
 
 const HeroSection = ({
   onSearch = () => {},
-  backgroundImage = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80",
   title = "Find Your Perfect Property",
   subtitle = "Search through millions of properties to find your next home",
   showSearch = true,
-  showStats = true,
   height = "h-[500px]",
 }: HeroSectionProps) => {
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -29,21 +28,36 @@ const HeroSection = ({
     onSearch(searchTerm);
   };
 
+  const handleAnimationComplete = () => {
+    console.log('Hero text animation completed!');
+  };
+
   return (
     <div className={`relative w-full ${height} bg-gray-900 overflow-hidden`}>
-      {/* Background Image with Overlay */}
-      <div
-        className="absolute inset-0 bg-cover bg-center scale-105 animate-ken-burns"
-        style={{ backgroundImage: `url(${backgroundImage})` }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/30 to-black/60 backdrop-blur-sm" />
+      {/* Aurora Background */}
+      <div className="absolute inset-0">
+        <Aurora
+          colorStops={["#004F39", "#FEFACA", "#151513"]}
+          blend={0.6}
+          amplitude={1.2}
+          speed={0.3}
+        />
+        <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />
       </div>
 
       {/* Content */}
       <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center text-center py-16 pt-24 animate-fade-in-up">
-        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 sm:mb-6">
-          {title}
-        </h1>
+        <SplitText
+          text={title}
+          className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4"
+          delay={50}
+          animationFrom={{ opacity: 0, transform: 'translate3d(0,50px,0)' }}
+          animationTo={{ opacity: 1, transform: 'translate3d(0,0,0)' }}
+          easing={(t: number) => 1 - Math.pow(1 - t, 3)} // easeOutCubic function
+          threshold={0.2}
+          rootMargin="-50px"
+          onLetterAnimationComplete={handleAnimationComplete}
+        />
         <p className="text-lg sm:text-xl text-gray-200 mb-6 sm:mb-8 max-w-3xl mx-auto">
           {subtitle}
         </p>
@@ -60,7 +74,7 @@ const HeroSection = ({
                 placeholder="Enter an address, neighbourhood, city, or postcode"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full h-12 sm:h-14 pl-5 pr-14 text-base sm:text-lg bg-white text-black border-2 border-transparent focus:border-primary"
+                className="w-full h-12 sm:h-14 pl-5 pr-14 text-base sm:text-lg bg-white/90 backdrop-blur-sm text-black border-2 border-transparent focus:border-primary"
               />
               <Button
                 type="submit"

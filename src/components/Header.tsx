@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "./ui/button";
-import { Menu } from "lucide-react";
+import { LogIn, Menu } from "lucide-react";
 import { MobileNav } from "./MobileNav";
 import {
   NavigationMenu,
@@ -9,14 +9,11 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
-  navigationMenuTriggerStyle,
 } from "./ui/navigation-menu";
 import { cn } from "../lib/utils";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/auth";
 import {
-  Building2,
-  LogIn,
   UserPlus,
   LogOut,
   Settings,
@@ -31,7 +28,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
-import { useLocation } from "react-router-dom";
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -59,7 +55,7 @@ const Header = ({
 }: HeaderProps) => {
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const navigate = useNavigate();
-  const { user, profile, signOut } = useAuth();
+  const { signOut } = useAuth();
 
   const handleSignOut = async () => {
     console.log("Sign out button clicked"); // Add this line
@@ -84,7 +80,7 @@ const Header = ({
             ref={ref}
             className={cn(
               "block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground",
-              className,
+              className ?? ""
             )}
             {...props}
           >

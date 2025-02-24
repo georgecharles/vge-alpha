@@ -25,14 +25,15 @@ export async function getInvestmentAnalysis(propertyType: string, budget: number
 
   const prompt = `
     You are a UK property investment expert. Analyze investment opportunities for ${propertyType} properties with a budget of £${budget}.
-    Respond ONLY with a JSON object in this exact format:
+    Respond with a JSON object containing ONLY these exact fields:
     {
-      "analysis": "2-3 sentence overview of the investment opportunity",
-      "roi_range": "Expected ROI range as a percentage (e.g., '8-12%')",
-      "risks": ["3 specific risks"],
-      "opportunities": ["3 specific opportunities"],
-      "market_trends": ["3 current market trends"]
+      "analysis": "Brief overview of the investment opportunity",
+      "roi_range": "Expected ROI range as a percentage",
+      "risks": ["Risk 1", "Risk 2", "Risk 3"],
+      "opportunities": ["Opportunity 1", "Opportunity 2", "Opportunity 3"],
+      "market_trends": ["Trend 1", "Trend 2", "Trend 3"]
     }
+    Ensure each array has exactly 3 items and all fields are present.
   `;
 
   try {
@@ -40,15 +41,43 @@ export async function getInvestmentAnalysis(propertyType: string, budget: number
     const response = await result.response;
     const text = sanitizeJsonString(response.text().trim());
     console.log('Raw Analysis Response:', text);
-    return JSON.parse(text);
+    
+    const parsedData = JSON.parse(text);
+    
+    // Validate the response structure
+    if (!parsedData.analysis || !parsedData.roi_range || 
+        !Array.isArray(parsedData.risks) || !Array.isArray(parsedData.opportunities) || 
+        !Array.isArray(parsedData.market_trends)) {
+      throw new Error('Invalid response format');
+    }
+
+    return {
+      analysis: parsedData.analysis,
+      roi_range: parsedData.roi_range,
+      risks: parsedData.risks.slice(0, 3),
+      opportunities: parsedData.opportunities.slice(0, 3),
+      market_trends: parsedData.market_trends.slice(0, 3)
+    };
   } catch (error) {
     console.error("Error in getInvestmentAnalysis:", error);
     return {
-      analysis: "Investment analysis currently unavailable",
+      analysis: `Analysis for ${propertyType} properties with £${budget} budget is currently unavailable`,
       roi_range: "8-12%",
-      risks: ["Market volatility", "Economic uncertainty", "Property condition risks"],
-      opportunities: ["Value appreciation", "Rental income", "Development potential"],
-      market_trends: ["Rising demand", "Price stability", "Urban regeneration"]
+      risks: [
+        "Market volatility",
+        "Economic uncertainty",
+        "Property condition risks"
+      ],
+      opportunities: [
+        "Value appreciation potential",
+        "Rental income opportunities",
+        "Development possibilities"
+      ],
+      market_trends: [
+        "Rising demand in key areas",
+        "Stable price growth",
+        "Infrastructure development"
+      ]
     };
   }
 }

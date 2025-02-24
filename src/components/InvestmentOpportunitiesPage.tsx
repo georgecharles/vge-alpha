@@ -20,10 +20,12 @@ import {
 } from "../lib/ai-utils";
 import { Loader2, TrendingUp, Brain, BarChart3 } from "lucide-react";
 
+type PropertyType = "residential" | "commercial" | "industrial";
+
 export default function InvestmentOpportunitiesPage() {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [propertyType, setPropertyType] = React.useState("residential");
+  const [propertyType, setPropertyType] = React.useState<PropertyType>("residential");
   const [budget, setBudget] = React.useState(250000);
   const [location, setLocation] = React.useState("London");
   const [analysis, setAnalysis] = React.useState<any>(null);
@@ -91,8 +93,11 @@ export default function InvestmentOpportunitiesPage() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Property Type</label>
-                  <Select value={propertyType} onValueChange={setPropertyType}>
-                    <SelectTrigger>
+                  <Select 
+                    defaultValue={propertyType}
+                    onValueChange={(value: PropertyType) => setPropertyType(value)}
+                  >
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select property type" />
                     </SelectTrigger>
                     <SelectContent>

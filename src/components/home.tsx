@@ -9,7 +9,6 @@ import { SubscriptionModal } from "./SubscriptionModal";
 import { MessagesModal } from "./MessagesModal";
 import { Footer } from "./Footer";
 import { LegalDisclaimer } from "./LegalDisclaimer";
-import { PartnersCarousel } from "./PartnersCarousel";
 import { useAuth } from "../lib/auth";
 import { searchProperties, getFeaturedProperties, Property } from "../lib/properties";
 import { Marquee } from "./ui/Marquee";
@@ -200,25 +199,7 @@ const Home = () => {
 
         <MarketTrends />
 
-        <PartnersCarousel />
-
-        <div className="w-full bg-background py-8">
-          <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
-            <div className="mb-8">
-              <LegalDisclaimer />
-            </div>
-          </div>
-        </div>
-
-        {(!profile || profile.subscription_tier === "free") && (
-          <SubscriptionCTA
-            onSubscribe={() => setIsSubscriptionModalOpen(true)}
-            title="Unlock Premium Property Insights"
-            description="Get access to detailed property analysis, market comparisons, and investment metrics to make informed decisions."
-          />
-        )}
-
-        {/* Trusted by Industry Leaders Section */}
+            {/* Trusted by Industry Leaders Section */}
         <section className="w-full py-12 bg-background">
           <div className="container mx-auto text-center mb-8">
             <h2 className="text-3xl font-bold mb-4">Trusted by Industry Leaders</h2>
@@ -262,6 +243,24 @@ const Home = () => {
             <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-background"></div>
           </div>
         </section>
+
+        <div className="w-full bg-background py-8">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+            <div className="mb-8">
+              <LegalDisclaimer />
+            </div>
+          </div>
+        </div>
+
+        {(!profile || profile.subscription_tier === "free") && (
+          <SubscriptionCTA
+            onSubscribe={() => setIsSubscriptionModalOpen(true)}
+            title="Unlock Premium Property Insights"
+            description="Get access to detailed property analysis, market comparisons, and investment metrics to make informed decisions."
+          />
+        )}
+
+
       </main>
 
       <Footer />

@@ -1,12 +1,10 @@
-import React from "react";
-import Header from "./Header";
 import HeroSection from "./HeroSection";
 import { Layout } from "./Layout";
 import { PageTransition } from "./ui/page-transition";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Badge } from "./ui/badge";
-import { Brain, Building2, BarChart3, ClipboardCheck, Home, MessageSquare, Shield } from "lucide-react";
+import { Brain, Building2, BarChart3, Home, MessageSquare, Shield } from "lucide-react";
 
 const aiFeatures = [
   {

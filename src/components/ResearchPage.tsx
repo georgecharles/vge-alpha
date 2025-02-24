@@ -22,7 +22,7 @@ export default function ResearchPage() {
         <HeroSection
           title="Research & Reports"
           subtitle="Expert analysis and insights to inform your property investment decisions"
-          backgroundImage="https://images.unsplash.com/photo-1434626881859-194d67b2b86f?ixlib=rb-4.0.3"
+          image="https://images.unsplash.com/photo-1434626881859-194d67b2b86f?ixlib=rb-4.0.3"
           showSearch={false}
           showStats={false}
           height="h-[400px]"

@@ -67,6 +67,7 @@ export default function InvestmentOpportunitiesPage() {
           subtitle="Make data-driven investment decisions with our advanced AI analytics"
           showSearch={false}
           height="h-[400px]"
+          onSearch={() => {}}
         />
         
         <main className="container mx-auto px-4 py-8 pt-24">

@@ -3,7 +3,6 @@ import Header from "./Header";
 import HeroSection from "./HeroSection";
 import PropertyCard from "./PropertyCard";
 import MarketTrends from "./MarketTrends";
-import { SubscriptionCTA } from "./SubscriptionCTA";
 import { AuthModal } from "./AuthModal";
 import { SubscriptionModal } from "./SubscriptionModal";
 import { MessagesModal } from "./MessagesModal";
@@ -13,7 +12,6 @@ import { useAuth } from "../lib/auth";
 import { searchProperties, getFeaturedProperties, Property } from "../lib/properties";
 import { Marquee } from "./ui/Marquee";
 import { cn } from "../lib/utils";
-import SpotlightCard from './SpotlightCard';
 import { LiquidChrome } from "./LiquidChrome";
 
 type AuthMode = "signin" | "signup";

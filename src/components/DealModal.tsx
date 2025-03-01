@@ -15,9 +15,10 @@ interface DealModalProps {
   isOpen: boolean;
   onClose: () => void;
   deal: Deal | null;
+  isSubscriber: boolean;
 }
 
-export const DealModal: React.FC<DealModalProps> = ({ isOpen, onClose, deal }) => {
+export const DealModal: React.FC<DealModalProps> = ({ isOpen, onClose, deal, isSubscriber }) => {
   if (!deal) return null;
 
   const locationDisplay = [

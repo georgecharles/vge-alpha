@@ -188,6 +188,7 @@ export const Deals = () => {
         isOpen={isDealModalOpen}
         onClose={() => setIsDealModalOpen(false)}
         deal={selectedDeal}
+        isSubscriber={profile?.subscription_tier !== 'free'}
       />
     </div>
   );

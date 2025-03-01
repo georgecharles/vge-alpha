@@ -129,8 +129,9 @@ export default function Dashboard() {
     loadUsers();
   }, [user, navigate, loadProperties, loadUsers]);
 
-  if (!profile || profile.role !== 'admin') {
-    return <div>Unauthorized: Admin access required</div>;
+  if (!user) {
+    navigate("/");
+    return null;
   }
 
   return (
@@ -204,51 +205,53 @@ export default function Dashboard() {
             </Card>
           </div>
 
-          <div className="space-y-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold flex items-center gap-2">
-                <Users className="w-5 h-5" /> User Management
-              </h2>
-            </div>
-            {error && <div className="text-red-500 mb-4">{error}</div>}
-            {isLoading ? (
-              <div>Loading...</div>
-            ) : (
-              <div className="grid gap-4">
-                {users.map((user) => (
-                  <div key={user.id} className="border p-4 rounded-lg">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-semibold">{user.full_name}</p>
-                        <p className="text-sm text-gray-600">{user.email}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <select
-                          value={user.role}
-                          onChange={(e) => handleUserUpdate(user.id, { role: e.target.value })}
-                          className="border rounded p-1"
-                        >
-                          <option value="user">User</option>
-                          <option value="moderator">Moderator</option>
-                          <option value="admin">Admin</option>
-                        </select>
-                        <select
-                          value={user.subscription_tier}
-                          onChange={(e) => handleUserUpdate(user.id, { subscription_tier: e.target.value })}
-                          className="border rounded p-1"
-                        >
-                          <option value="free">Free</option>
-                          <option value="basic">Basic</option>
-                          <option value="pro">Pro</option>
-                          <option value="premium">Premium</option>
-                        </select>
+          {profile?.role === 'admin' && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-semibold flex items-center gap-2">
+                  <Users className="w-5 h-5" /> User Management
+                </h2>
+              </div>
+              {error && <div className="text-red-500 mb-4">{error}</div>}
+              {isLoading ? (
+                <div>Loading...</div>
+              ) : (
+                <div className="grid gap-4">
+                  {users.map((user) => (
+                    <div key={user.id} className="border p-4 rounded-lg">
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-semibold">{user.full_name}</p>
+                          <p className="text-sm text-gray-600">{user.email}</p>
+                        </div>
+                        <div className="flex gap-2">
+                          <select
+                            value={user.role}
+                            onChange={(e) => handleUserUpdate(user.id, { role: e.target.value })}
+                            className="border rounded p-1"
+                          >
+                            <option value="user">User</option>
+                            <option value="moderator">Moderator</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <select
+                            value={user.subscription_tier}
+                            onChange={(e) => handleUserUpdate(user.id, { subscription_tier: e.target.value })}
+                            className="border rounded p-1"
+                          >
+                            <option value="free">Free</option>
+                            <option value="basic">Basic</option>
+                            <option value="pro">Pro</option>
+                            <option value="premium">Premium</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div className="space-y-6">
@@ -260,7 +263,7 @@ export default function Dashboard() {
                   <PropertyCard
                     key={saved.property.id}
                     {...saved.property}
-                    isSubscriber={true}
+                    isSubscriber={profile?.subscription_tier !== 'free'}
                   />
                 ))}
               </div>
@@ -275,7 +278,7 @@ export default function Dashboard() {
                   <PropertyCard
                     key={property.id}
                     {...property}
-                    isSubscriber={true}
+                    isSubscriber={profile?.subscription_tier !== 'free'}
                   />
                 ))}
               </div>

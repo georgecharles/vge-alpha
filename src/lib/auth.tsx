@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import type { User } from "@supabase/supabase-js";
 import type { Tables } from "../types/supabase";
+import { GoogleSignupModal } from "../components/GoogleSignupModal";
 
 type Profile = Tables<"profiles">;
 
@@ -30,12 +31,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showGoogleSignupModal, setShowGoogleSignupModal] = useState(false);
+  const [pendingGoogleUser, setPendingGoogleUser] = useState<User | null>(null);
 
   async function fetchProfile(userId: string) {
     try {
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("*")
+        .select("*, avatar_url")
         .eq("id", userId)
         .single();
 
@@ -46,7 +49,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log("Fetched profile:", profile);
-
       setProfile(profile);
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -57,10 +59,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    // Initialize auth state
     const initializeAuth = async () => {
       try {
-        // Get current session
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) throw error;
@@ -68,10 +68,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mounted) {
           if (session?.user) {
             setUser(session.user);
-            await fetchProfile(session.user.id);
-          } else {
-            setUser(null);
-            setProfile(null);
+            // Check if profile exists for this user
+            const { data: existingProfile } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+
+            if (!existingProfile) {
+              // New user from Google sign-in
+              console.log('New Google user detected');
+              setPendingGoogleUser(session.user);
+              setShowGoogleSignupModal(true);
+            } else {
+              setProfile(existingProfile);
+            }
           }
           setIsLoading(false);
         }
@@ -79,12 +90,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Listen for auth changes
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (event, session) => {
-            console.log('Auth state change:', event, session); // Debug log
+            console.log('Auth state change:', event, session);
             
             if (mounted) {
               if (session?.user) {
                 setUser(session.user);
-                await fetchProfile(session.user.id);
+                
+                // Check if profile exists
+                const { data: profile } = await supabase
+                  .from('profiles')
+                  .select('*')
+                  .eq('id', session.user.id)
+                  .single();
+
+                if (!profile && event === 'SIGNED_IN') {
+                  console.log('New Google user detected on auth change');
+                  setPendingGoogleUser(session.user);
+                  setShowGoogleSignupModal(true);
+                } else {
+                  setProfile(profile);
+                }
               } else {
                 setUser(null);
                 setProfile(null);
@@ -107,6 +132,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
 
     initializeAuth();
+  }, []);
+
+  // Add this effect to handle Google redirect
+  useEffect(() => {
+    const handleRedirect = async () => {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      if (error) console.error('Error getting session:', error);
+      
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (!profile) {
+          console.log('New Google user detected after redirect');
+          setPendingGoogleUser(session.user);
+          setShowGoogleSignupModal(true);
+        }
+      }
+    };
+
+    // Check if this is a redirect from Google
+    if (window.location.hash.includes('access_token')) {
+      handleRedirect();
+    }
   }, []);
 
   // Add a session recovery effect
@@ -242,7 +294,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signOut,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {showGoogleSignupModal && pendingGoogleUser && (
+        <GoogleSignupModal
+          isOpen={showGoogleSignupModal}
+          onClose={() => {
+            setShowGoogleSignupModal(false);
+            setPendingGoogleUser(null);
+          }}
+          googleUser={pendingGoogleUser}
+        />
+      )}
+    </AuthContext.Provider>
+  );
 }
 
 function useAuth() {

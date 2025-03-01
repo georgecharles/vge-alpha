@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Button } from "./ui/button";
-import { ArrowRight, TrendingUp, Home, PoundSterling, Map, RefreshCw } from "lucide-react";
+import { ArrowRight, TrendingUp, Home, PoundSterling, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import {
   LineChart,
@@ -193,7 +193,7 @@ const MarketTrends = ({
 
   const [predictiveData, setPredictiveData] = useState<PredictiveData[]>([]);
   const [hotspots, setHotspots] = useState<HotspotData[]>([]);
-  const [predictiveInsights, setPredictiveInsights] = useState<string>("");
+  const [] = useState<string>("");
   const [isLoadingPredictions, setIsLoadingPredictions] = useState(false);
   const [isLoadingHotspots, setIsLoadingHotspots] = useState(false);
   const [refreshingPredictions, setRefreshingPredictions] = useState(false);
@@ -215,7 +215,17 @@ const MarketTrends = ({
     setIsLoadingHotspots(true);
     try {
       const data = await getInvestmentHotspots();
-      setHotspots(data.hotspots || []);
+      // Transform the data to ensure correct types
+      const transformedHotspots: HotspotData[] = data.hotspots.map(hotspot => ({
+        ...hotspot,
+        // Ensure investmentType is one of the allowed values
+        investmentType: (hotspot.investmentType === 'Residential' || 
+                        hotspot.investmentType === 'Commercial' || 
+                        hotspot.investmentType === 'Mixed') 
+          ? hotspot.investmentType 
+          : 'Mixed' // Default value if type doesn't match
+      }));
+      setHotspots(transformedHotspots);
     } catch (error) {
       console.error("Error fetching hotspots:", error);
     } finally {

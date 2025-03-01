@@ -33,7 +33,8 @@ import AuthCallback from "./components/AuthCallback";
 import PropertyManagementPage from "./components/PropertyManagementPage";
 import InvestmentOpportunitiesPage from "./components/InvestmentOpportunitiesPage";
 import AboutUsPage from "./components/AboutUsPage";
-import { Deals } from "./components/Deals";
+import DealsPage from "./components/DealsPage";
+import Messages from "./components/Messages";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -67,7 +68,7 @@ function AppContent() {
         <Suspense fallback={<Loading />}>
           <Routes location={location}>
             <Route path="/" element={<Home />} />
-            <Route path="/deals" element={<Deals />} />
+            <Route path="/deals" element={<DealsPage />} />
             <Route
               path="/dashboard"
               element={
@@ -108,6 +109,14 @@ function AppContent() {
             <Route path="/property-management" element={<PropertyManagementPage />} />
             <Route path="/investment-opportunities" element={<InvestmentOpportunitiesPage />} />
             <Route path="/about-us" element={<AboutUsPage />} />
+            <Route
+              path="/messages"
+              element={
+                <RequireAuth>
+                  <Messages />
+                </RequireAuth>
+              }
+            />
             {import.meta.env.VITE_TEMPO === "true" && (
               <Route path="/tempobook/*" />
             )}

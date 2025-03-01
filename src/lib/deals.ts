@@ -20,50 +20,56 @@ export interface Deal {
   };
   key_features: string[];
   created_at: string;
+  sensitive_info?: string;
 }
 
 export const getDeals = async (page = 1, limit = 6) => {
-  const start = (page - 1) * limit;
-  
-  console.log('Fetching deals:', { page, limit, start });
+  try {
+    // First verify the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
 
-  const { data, error } = await supabase
-    .from('deals')
-    .select(`
-      id,
-      title,
-      description,
-      type,
-      status,
-      original_price,
-      deal_price,
-      potential_profit,
-      roi_percentage,
-      is_premium,
-      images,
-      location,
-      key_features,
-      created_at
-    `)
-    .range(start, start + limit - 1)
-    .order('created_at', { ascending: false });
+    // Get user's profile to check subscription
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('subscription_tier')
+      .eq('id', user.id)
+      .single();
 
-  console.log('Supabase deals response:', { data, error });
+    const start = (page - 1) * limit;
+    
+    console.log('Fetching deals:', { page, limit, start });
 
-  if (error) {
+    const { data, error } = await supabase
+      .from('deals')
+      .select(`
+        *,
+        author:profiles!deals_created_by_fkey(full_name)
+      `)
+      .range(start, start + limit - 1)
+      .order('created_at', { ascending: false });
+
+    console.log('Supabase deals response:', { data, error });
+
+    if (error) {
+      console.error('Error fetching deals:', error);
+      throw error;
+    }
+
+    // Filter deals based on subscription tier
+    const transformedData = data.map(deal => ({
+      ...deal,
+      // Only show sensitive info to paid subscribers
+      sensitive_info: profile?.subscription_tier !== 'free' ? deal.sensitive_info : null
+    }));
+
+    return transformedData;
+  } catch (error) {
     console.error('Error fetching deals:', error);
-    throw error;
+    return [];
   }
-
-  // Transform the data
-  const transformedData = (data || []).map(deal => ({
-    ...deal,
-    images: Array.isArray(deal.images) ? deal.images : [deal.images].filter(Boolean),
-    location: typeof deal.location === 'string' ? JSON.parse(deal.location) : (deal.location || {}),
-    key_features: Array.isArray(deal.key_features) ? deal.key_features : []
-  }));
-
-  return transformedData;
 };
 
 export const searchDeals = async (searchTerm: string): Promise<Deal[]> => {
@@ -128,43 +134,43 @@ export const searchDeals = async (searchTerm: string): Promise<Deal[]> => {
 };
 
 export const getDeal = async (id: string): Promise<Deal | null> => {
-  console.log('Fetching deal:', id);
+  try {
+    // First verify the user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      throw new Error('Not authenticated');
+    }
 
-  const { data: deal, error } = await supabase
-    .from('deals')
-    .select(`
-      id,
-      title,
-      description,
-      type,
-      status,
-      original_price,
-      deal_price,
-      potential_profit,
-      roi_percentage,
-      is_premium,
-      images,
-      location,
-      key_features,
-      created_at
-    `)
-    .eq('id', id)
-    .single();
+    console.log('Fetching deal:', id);
 
-  console.log('Deal fetch result:', { deal, error });
+    const { data: deal, error } = await supabase
+      .from('deals')
+      .select(`
+        *,
+        author:profiles!deals_created_by_fkey(full_name)
+      `)
+      .eq('id', id)
+      .single();
 
-  if (error) {
+    console.log('Deal fetch result:', { deal, error });
+
+    if (error) {
+      console.error('Error fetching deal:', error);
+      return null;
+    }
+
+    if (!deal) return null;
+
+    // Transform the data
+    return {
+      ...deal,
+      images: Array.isArray(deal.images) ? deal.images : [deal.images].filter(Boolean),
+      location: typeof deal.location === 'string' ? JSON.parse(deal.location) : (deal.location || {}),
+      key_features: Array.isArray(deal.key_features) ? deal.key_features : [],
+      sensitive_info: deal.sensitive_info
+    };
+  } catch (error) {
     console.error('Error fetching deal:', error);
     return null;
   }
-
-  if (!deal) return null;
-
-  // Transform the data
-  return {
-    ...deal,
-    images: Array.isArray(deal.images) ? deal.images : [deal.images].filter(Boolean),
-    location: typeof deal.location === 'string' ? JSON.parse(deal.location) : (deal.location || {}),
-    key_features: Array.isArray(deal.key_features) ? deal.key_features : []
-  };
 }; 

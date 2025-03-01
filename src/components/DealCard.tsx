@@ -3,6 +3,7 @@ import { Deal } from "../lib/deals";
 import { formatCurrency } from "../lib/utils";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
+import { MapPin } from "lucide-react";
 
 interface DealCardProps {
   deal: Deal;
@@ -10,46 +11,68 @@ interface DealCardProps {
 }
 
 export const DealCard: React.FC<DealCardProps> = ({ deal, isSubscriber }) => {
-  const [imageError, setImageError] = React.useState(false);
+  const [, setImageError] = React.useState(false);
+  const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   
-  // Get the image URL from the deal
-  const imageUrl = typeof deal.images === 'string' 
-    ? deal.images.replace(/["\\]/g, '') // Remove quotes and backslashes
-    : Array.isArray(deal.images) 
-      ? deal.images[0]
-      : null;
+  console.log('Deal data in card:', deal); // Let's see what data we have
+  
+  const imageUrl = Array.isArray(deal.images) && deal.images.length > 0
+    ? deal.images[currentImageIndex]
+    : 'https://source.unsplash.com/random/800x600?property';
 
-  console.log('Deal in card:', deal);
-  console.log('Images in card:', deal.images);
+  console.log('Using image URL:', imageUrl); // Let's see which URL we're using
+
+  const handleImageError = () => {
+    console.error('Image load error for:', imageUrl);
+    if (Array.isArray(deal.images) && currentImageIndex < deal.images.length - 1) {
+      setCurrentImageIndex(prev => prev + 1);
+    } else {
+      setImageError(true);
+    }
+  };
+
+  // Format location display
+  const locationDisplay = [
+    deal.location?.address,
+    deal.location?.city,
+    deal.location?.postcode
+  ].filter(Boolean).join(", ");
 
   return (
     <Card className="overflow-hidden">
       <div className="relative aspect-video overflow-hidden bg-muted">
-        {imageUrl && !imageError && (
-          <img
-            src={imageUrl}
-            alt={deal.title}
-            className="object-cover w-full h-full"
-            onError={(e) => {
-              console.error('Image load error:', e);
-              setImageError(true);
-            }}
-          />
-        )}
+        <img
+          src={imageUrl}
+          alt={deal.title}
+          className="object-cover w-full h-full"
+          onError={handleImageError}
+        />
         {deal.is_premium && !isSubscriber && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <Badge variant="premium">Premium Deal</Badge>
           </div>
         )}
+        <Badge 
+          className="absolute top-2 right-2" 
+          variant={deal.status === 'available' ? 'success' : deal.status === 'under offer' ? 'warning' : 'secondary'}
+        >
+          {deal.status}
+        </Badge>
       </div>
       <CardHeader>
-        <div className="flex justify-between items-start">
-          <h3 className="text-lg font-semibold">{deal.title}</h3>
+        <div className="flex justify-between items-start gap-2">
+          <h3 className="text-lg font-semibold line-clamp-2">{deal.title}</h3>
           <Badge>{deal.type}</Badge>
         </div>
+        {locationDisplay && (
+          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4" />
+            <span className="line-clamp-1">{locationDisplay}</span>
+          </div>
+        )}
       </CardHeader>
       <CardContent>
-        <div className="space-y-2">
+        <div className="space-y-4">
           <p className="text-sm text-muted-foreground line-clamp-2">{deal.description}</p>
           
           <div className="grid grid-cols-2 gap-2">
@@ -76,11 +99,13 @@ export const DealCard: React.FC<DealCardProps> = ({ deal, isSubscriber }) => {
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-1 mt-2">
-            {deal.key_features?.slice(0, 3).map((feature, index) => (
-              <Badge key={index} variant="outline">{feature}</Badge>
-            ))}
-          </div>
+          {deal.key_features?.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {deal.key_features.slice(0, 3).map((feature, index) => (
+                <Badge key={index} variant="outline">{feature}</Badge>
+              ))}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

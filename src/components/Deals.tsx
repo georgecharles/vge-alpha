@@ -1,121 +1,194 @@
 import React from "react";
-import { Deal, getDeals } from "../lib/deals";
+import { Deal, getDeals, searchDeals } from "../lib/deals";
 import { DealCard } from "./DealCard";
 import { useAuth } from "../lib/auth";
 import Header from "./Header";
 import { Footer } from "./Footer";
-import { HeroSection } from "./HeroSection";
+import HeroSection from "./HeroSection";
+import { LoadingSpinner } from "./ui/loading-spinner";
+import { DealModal } from "./DealModal";
 
 export const Deals = () => {
-  const { user, profile, signOut } = useAuth();
+  const { profile } = useAuth();
   const [deals, setDeals] = React.useState<Deal[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [isSearching, setIsSearching] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
+  const [isFetchingMore, setIsFetchingMore] = React.useState(false);
+  const observerTarget = React.useRef<HTMLDivElement>(null);
+  const loadingRef = React.useRef(false);
   const DEALS_PER_PAGE = 6;
+  const [selectedDeal, setSelectedDeal] = React.useState<Deal | null>(null);
+  const [isDealModalOpen, setIsDealModalOpen] = React.useState(false);
+  const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
-  const loadDeals = async (pageNum = 1) => {
-    if (pageNum === 1) {
-      setIsLoading(true);
-    }
-    
+  const loadDeals = async (pageNum = 1, isLoadingMore = false) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
     try {
+      if (!isLoadingMore) {
+        setIsLoading(true);
+      } else {
+        setIsFetchingMore(true);
+      }
+      
       const fetchedDeals = await getDeals(pageNum, DEALS_PER_PAGE);
+      
       if (pageNum === 1) {
         setDeals(fetchedDeals);
       } else {
         setDeals(prev => [...prev, ...fetchedDeals]);
       }
+      
       setHasMore(fetchedDeals.length === DEALS_PER_PAGE);
+      setPage(pageNum);
+      setIsInitialLoad(false);
     } catch (error) {
       console.error("Error loading deals:", error);
     } finally {
       setIsLoading(false);
+      setIsFetchingMore(false);
+      loadingRef.current = false;
     }
   };
 
-  const handleSearch = async (term: string) => {
-    // Implement deal search functionality if needed
-    console.log("Searching deals:", term);
-  };
-
+  // Initial load
   React.useEffect(() => {
-    loadDeals();
-  }, []);
+    if (isInitialLoad) {
+      loadDeals(1, false);
+    }
+  }, [isInitialLoad]);
 
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    loadDeals(nextPage);
+  // Intersection Observer for infinite scroll
+  React.useEffect(() => {
+    if (!observerTarget.current || isInitialLoad || isSearching) return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
+          loadDeals(page + 1, true);
+        }
+      },
+      { 
+        rootMargin: '200px',
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [hasMore, page, isInitialLoad, isSearching]);
+
+  const handleSearch = async (term: string) => {
+    if (!term.trim()) {
+      // Reset all states when clearing search
+      setDeals([]);
+      setIsSearching(false);
+      setPage(1);
+      setHasMore(true);
+      loadDeals(1, false); // Use the existing loadDeals function
+      return;
+    }
+
+    setIsSearching(true);
+    setIsLoading(true); // Show loading state during search
+    setDeals([]); // Clear existing results before search
+
+    try {
+      console.log('Searching for term:', term);
+      const results = await searchDeals(term);
+      console.log('Search results:', results);
+
+      if (results.length === 0) {
+        console.log('No results found');
+      }
+
+      setDeals(results);
+      setHasMore(false); // Disable infinite scroll for search results
+      setPage(1); // Reset page number
+    } catch (error) {
+      console.error("Error searching deals:", error);
+      setDeals([]); // Clear results on error
+    } finally {
+      setIsSearching(false);
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <Header
-        isAuthenticated={!!user}
-        userProfile={profile || undefined}
-        onSignIn={() => {
-          // Implement sign in logic
-        }}
-        onSignUp={() => {
-          // Implement sign up logic
-        }}
-        onSignOut={async () => {
-          try {
-            await signOut();
-            window.location.href = "/";
-          } catch (error) {
-            console.error("Error signing out:", error);
-          }
-        }}
-      />
-
+      <Header />
       <main>
         <HeroSection 
           onSearch={handleSearch}
-          title="Investment Deals"
-          subtitle="Discover exclusive property investment opportunities"
+          title="Exclusive Property Deals"
+          subtitle="Discover below-market-value properties, development opportunities, and high-yield investments"
         />
 
         <div className="w-full bg-background py-8">
           <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
-            <h2 className="text-2xl font-bold mb-6">Featured Deals</h2>
+            <h2 className="text-2xl font-bold mb-6">
+              {isSearching ? "Search Results" : "Available Deals"}
+            </h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {isLoading && page === 1 ? (
+              {isLoading ? (
                 Array(3).fill(0).map((_, i) => (
                   <div
                     key={i}
                     className="w-full h-[420px] bg-muted rounded-lg animate-pulse"
                   />
                 ))
-              ) : (
+              ) : deals.length > 0 ? (
                 deals.map((deal) => (
-                  <DealCard
+                  <div 
                     key={deal.id}
-                    deal={deal}
-                    isSubscriber={profile?.subscription_tier !== "free"}
-                  />
+                    onClick={() => {
+                      setSelectedDeal(deal);
+                      setIsDealModalOpen(true);
+                    }}
+                    className="cursor-pointer hover:opacity-90 transition-opacity"
+                  >
+                    <DealCard
+                      deal={deal}
+                      isSubscriber={profile?.subscription_tier !== "free"}
+                    />
+                  </div>
                 ))
+              ) : (
+                <div className="col-span-3 text-center py-8 text-muted-foreground">
+                  No deals found
+                </div>
               )}
             </div>
             
-            {hasMore && (
-              <div className="flex justify-center mb-16">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={isLoading}
-                  className="px-6 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? 'Loading...' : 'Load More'}
-                </button>
+            {hasMore && !isLoading && !isSearching && (
+              <div 
+                ref={observerTarget} 
+                className="h-24 flex items-center justify-center my-8"
+              >
+                {isFetchingMore ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <LoadingSpinner />
+                    <p className="text-sm text-muted-foreground">Loading more deals...</p>
+                  </div>
+                ) : (
+                  <div className="h-8" />
+                )}
               </div>
             )}
           </div>
         </div>
       </main>
-
       <Footer />
+
+      <DealModal
+        isOpen={isDealModalOpen}
+        onClose={() => setIsDealModalOpen(false)}
+        deal={selectedDeal}
+      />
     </div>
   );
 }; 

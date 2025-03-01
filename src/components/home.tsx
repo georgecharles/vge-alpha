@@ -13,6 +13,8 @@ import { searchProperties, getFeaturedProperties, Property } from "../lib/proper
 import { Marquee } from "./ui/Marquee";
 import { cn } from "../lib/utils";
 import { LiquidChrome } from "./LiquidChrome";
+import { PropertyModal } from "./PropertyModal";
+import { LoadingSpinner } from "./ui/loading-spinner";
 
 type AuthMode = "signin" | "signup";
 
@@ -77,6 +79,7 @@ const ReviewCard = ({
 
 const Home = () => {
   const { user, profile, signOut } = useAuth();
+  const [isInitialLoad, setIsInitialLoad] = React.useState(true);
   const [searchResults, setSearchResults] = React.useState<Property[]>([]);
   const [isSearching, setIsSearching] = React.useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
@@ -84,87 +87,154 @@ const Home = () => {
     React.useState(false);
   const [authMode, setAuthMode] = React.useState("signin");
   const [isMessagesModalOpen, setIsMessagesModalOpen] = React.useState(false);
-  const [selectedReceiverId, setSelectedReceiverId] = React.useState();
+  const [selectedReceiverId] = React.useState();
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
   const PROPERTIES_PER_PAGE = 6;
-  const [isLoadingMore, setIsLoadingMore] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [isFetchingMore, setIsFetchingMore] = React.useState(false);
+  const [selectedProperty, setSelectedProperty] = React.useState<Property | null>(null);
+  const [isPropertyModalOpen, setIsPropertyModalOpen] = React.useState(false);
+  const observerTarget = React.useRef<HTMLDivElement>(null);
+  const loadingRef = React.useRef(false);
 
-  const loadFeaturedProperties = async (pageNum = 1) => {
-    if (pageNum === 1) {
-      setIsSearching(true);
-    } else {
-      setIsLoadingMore(true);
-    }
-    
+  const loadFeaturedProperties = async (pageNum = 1, isLoadingMore = false) => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
+
     try {
-      const properties = await getFeaturedProperties(pageNum, PROPERTIES_PER_PAGE);
-      if (pageNum === 1) {
-        setSearchResults(properties.map(p => ({
-          ...p,
-          bedroom: p.bedrooms,
-          bathroom: p.bathrooms,
-          property_type: p.property_type
-        })));
+      if (!isLoadingMore) {
+        setIsLoading(true);
       } else {
-        setSearchResults(prev => [...prev, ...properties.map(p => ({
-          ...p,
-          bedroom: p.bedrooms,
-          bathroom: p.bathrooms,
-          property_type: p.property_type
-        }))]);
+        setIsFetchingMore(true);
       }
+      
+      const properties = await getFeaturedProperties(pageNum, PROPERTIES_PER_PAGE);
+      
+      // Map the database fields to our Property type with proper type checking
+      const mappedProperties = properties.map(p => ({
+        ...p,
+        bedroom: typeof p.bedroom === 'number' ? p.bedroom : 
+                 typeof p.bedrooms === 'number' ? p.bedrooms : 0,
+        bathroom: typeof p.bathroom === 'number' ? p.bathroom : 
+                  typeof p.bathrooms === 'number' ? p.bathrooms : 0,
+        property_type: p.property_type,
+        id: p.id,
+        address: p.address,
+        city: p.city,
+        postcode: p.postcode,
+        price: p.price,
+        square_footage: p.square_footage,
+        description: p.description,
+        images: p.images,
+        is_premium: p.is_premium,
+        created_at: p.created_at
+      }));
+      
+      if (pageNum === 1) {
+        setSearchResults(mappedProperties);
+      } else {
+        setSearchResults(prev => [...prev, ...mappedProperties]);
+      }
+      
       setHasMore(properties.length === PROPERTIES_PER_PAGE);
+      setPage(pageNum);
+      setIsInitialLoad(false);
     } catch (error) {
-      console.error("Error loading featured properties:", error);
+      console.error("Error loading properties:", error);
     } finally {
-      setIsSearching(false);
-      setIsLoadingMore(false);
+      setIsLoading(false);
+      setIsFetchingMore(false);
+      loadingRef.current = false;
     }
-  };
-
-  const handleLoadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    loadFeaturedProperties(nextPage);
   };
 
   React.useEffect(() => {
-    loadFeaturedProperties();
+    if (isInitialLoad) {
+      loadFeaturedProperties(1, false);
+    }
+  }, [isInitialLoad]);
 
-    const handleOpenAuthModal = (e: CustomEvent<{mode: string}>) => {
-      setAuthMode(e.detail.mode);
-      setIsAuthModalOpen(true);
-    };
-    const handleOpenMessages = (e: CustomEvent<{receiverId: string}>) => {
-      setSelectedReceiverId(e.detail.receiverId as any); // Type assertion to fix type error
-      setIsMessagesModalOpen(true);
-    };
-    window.addEventListener("open-auth-modal", handleOpenAuthModal as EventListenerOrEventListenerObject);
-    window.addEventListener("open-messages", handleOpenMessages as EventListenerOrEventListenerObject);
+  React.useEffect(() => {
+    if (!observerTarget.current || isInitialLoad || isSearching) return;
 
-    return () => {
-      window.removeEventListener("open-auth-modal", handleOpenAuthModal as EventListenerOrEventListenerObject);
-      window.removeEventListener("open-messages", handleOpenMessages as EventListenerOrEventListenerObject);
-    };
-  }, []);
+    const observer = new IntersectionObserver(
+      entries => {
+        if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
+          loadFeaturedProperties(page + 1, true);
+        }
+      },
+      { 
+        rootMargin: '200px',
+        threshold: 0.1
+      }
+    );
+
+    observer.observe(observerTarget.current);
+    return () => observer.disconnect();
+  }, [hasMore, page, isInitialLoad, isSearching]);
 
   const handleSearch = async (term: string) => {
+    if (!term.trim()) {
+      // Reset all states when clearing search
+      setSearchResults([]);
+      setIsSearching(false);
+      setPage(1);
+      setHasMore(true);
+      setIsLoading(true);
+      try {
+        const properties = await getFeaturedProperties(1, PROPERTIES_PER_PAGE);
+        setSearchResults(properties);
+        setHasMore(properties.length === PROPERTIES_PER_PAGE);
+      } catch (error) {
+        console.error("Error loading properties:", error);
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
     setIsSearching(true);
+    setSearchResults([]); // Clear existing results before search
     try {
       const results = await searchProperties(term);
-      setSearchResults(results.map(p => ({
+      const mappedResults = results.map(p => ({
         ...p,
         bedroom: p.bedrooms,
         bathroom: p.bathrooms,
-        property_type: p.property_type
-      })));
+        property_type: p.property_type,
+        id: p.id,
+        address: p.address,
+        city: p.city,
+        postcode: p.postcode,
+        price: p.price,
+        square_footage: p.square_footage,
+        description: p.description,
+        images: p.images,
+        is_premium: p.is_premium,
+        created_at: p.created_at
+      })) as Property[];
+      
+      setSearchResults(mappedResults);
+      setHasMore(false); // Disable infinite scroll for search results
+      setPage(1); // Reset page number
     } catch (error) {
       console.error("Error searching properties:", error);
+      setSearchResults([]); // Clear results on error
     } finally {
       setIsSearching(false);
     }
   };
+
+  // Render conditions
+  const showLoading = isLoading;
+  const showProperties = searchResults && searchResults.length > 0;
+  console.log('Render state:', { 
+    isLoading, 
+    searchResultsLength: searchResults?.length,
+    showLoading,
+    showProperties 
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -194,44 +264,63 @@ const Home = () => {
 
         <div className="w-full bg-background py-8">
           <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
-            <h2 className="text-2xl font-bold mb-6">Featured Properties</h2>
+            <h2 className="text-2xl font-bold mb-6">
+              {isSearching ? "Search Results" : "Featured Properties"}
+            </h2>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-              {isSearching && page === 1 ? (
+              {showLoading ? (
                 Array(3).fill(0).map((_, i) => (
                   <div
                     key={i}
                     className="w-full h-[420px] bg-muted rounded-lg animate-pulse"
                   />
                 ))
-              ) : (
+              ) : showProperties ? (
                 searchResults.map((property) => (
-                  <PropertyCard
-                    key={property.id}
-                    address={`${property.address}, ${property.city}, ${property.postcode}`}
-                    price={property.price}
-                    squareFootage={property.square_footage}
-                    isPremium={property.is_premium}
-                    isSubscriber={profile?.subscription_tier !== "free"}
-                    bedrooms={property.bedroom}
-                    bathrooms={property.bathroom}
-                    images={property.images}
-                    description={property.description}
-                    propertyType={property.property_type}
-                    createdAt={property.created_at}
-                  />
+                  <div 
+                    key={property.id} 
+                    onClick={() => {
+                      setSelectedProperty(property);
+                      setIsPropertyModalOpen(true);
+                    }}
+                    className="cursor-pointer hover:opacity-90 transition-opacity"
+                  >
+                    <PropertyCard
+                      address={`${property.address}, ${property.city}, ${property.postcode}`}
+                      price={property.price}
+                      squareFootage={property.square_footage}
+                      isPremium={property.is_premium}
+                      isSubscriber={profile?.subscription_tier !== "free"}
+                      bedrooms={property.bedroom}
+                      bathrooms={property.bathroom}
+                      images={property.images}
+                      description={property.description}
+                      propertyType={property.property_type}
+                      createdAt={property.created_at}
+                    />
+                  </div>
                 ))
+              ) : (
+                <div className="col-span-3 text-center py-8 text-muted-foreground">
+                  No properties found
+                </div>
               )}
             </div>
             
-            {hasMore && (
-              <div className="flex justify-center mb-16">
-                <button
-                  onClick={handleLoadMore}
-                  disabled={isLoadingMore}
-                  className="px-6 py-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoadingMore ? 'Loading...' : 'Load More'}
-                </button>
+            {hasMore && !isLoading && !isSearching && (
+              <div 
+                ref={observerTarget} 
+                className="h-24 flex items-center justify-center my-8"
+              >
+                {isFetchingMore ? (
+                  <div className="flex flex-col items-center gap-2">
+                    <LoadingSpinner />
+                    <p className="text-sm text-muted-foreground">Loading more properties...</p>
+                  </div>
+                ) : (
+                  <div className="h-8" />
+                )}
               </div>
             )}
           </div>
@@ -346,6 +435,12 @@ const Home = () => {
         isOpen={isMessagesModalOpen}
         onClose={() => setIsMessagesModalOpen(false)}
         receiverId={selectedReceiverId}
+      />
+
+      <PropertyModal
+        isOpen={isPropertyModalOpen}
+        onClose={() => setIsPropertyModalOpen(false)}
+        property={selectedProperty}
       />
     </div>
   );

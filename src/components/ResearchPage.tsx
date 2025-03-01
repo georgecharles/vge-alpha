@@ -20,12 +20,12 @@ export default function ResearchPage() {
       <div className="min-h-screen bg-neutral">
         <Header isAuthenticated={!!user} userProfile={profile || undefined} />
         <HeroSection
-          title="Research & Reports"
-          subtitle="Expert analysis and insights to inform your property investment decisions"
-          image="https://images.unsplash.com/photo-1434626881859-194d67b2b86f?ixlib=rb-4.0.3"
+          title="Research & Analysis"
+          subtitle="Discover in-depth market insights and property analysis"
           showSearch={false}
           showStats={false}
           height="h-[400px]"
+          image="/research-hero.jpg"
         />
         <main className="container mx-auto px-4 py-8">
           <div className="max-w-7xl mx-auto space-y-8">

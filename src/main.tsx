@@ -7,6 +7,7 @@ import { BrowserRouter } from "react-router-dom";
 import { TempoDevtools } from "tempo-devtools";
 import { AuthProvider } from "./lib/auth";
 import posthog from 'posthog-js'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 TempoDevtools.init();
 
@@ -17,12 +18,16 @@ posthog.init('phc_Pg1VGdZoazG7KyDNxnUXNZZz6zPVrGNSRtFlDnlZCcA',
     }
 )
 
+const queryClient = new QueryClient();
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   </React.StrictMode>,
 );

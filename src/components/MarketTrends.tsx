@@ -15,6 +15,7 @@ import {
   Area,
 } from "recharts";
 import { getChatResponse, formatMessage, getPredictiveAnalytics, getInvestmentHotspots } from "../lib/chat";
+import { formatCurrency } from "../lib/utils";
 
 interface MarketTrendsProps {
   trends?: Array<{
@@ -240,10 +241,43 @@ const MarketTrends = ({
     setRefreshingHotspots(false);
   };
 
+  const [bitcoinPrice, setBitcoinPrice] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [bitcoinLoading, setBitcoinLoading] = useState(true);
+
+  const fetchBitcoinPrice = async () => {
+    try {
+      setBitcoinLoading(true);
+      const response = await fetch(
+        'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=gbp'
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch Bitcoin price');
+      }
+
+      const data = await response.json();
+      setBitcoinPrice(data.bitcoin.gbp);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching Bitcoin price:', err);
+      setError('Failed to load Bitcoin price');
+      setBitcoinPrice(null);
+    } finally {
+      setBitcoinLoading(false);
+    }
+  };
+
   useEffect(() => {
     fetchMarketInsights();
     fetchPredictiveAnalytics();
     fetchHotspots();
+
+    fetchBitcoinPrice();
+    // Set up an interval to fetch the price every minute
+    const interval = setInterval(fetchBitcoinPrice, 60000);
+
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -601,6 +635,27 @@ const MarketTrends = ({
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        <div className="w-full bg-muted/50 py-12">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+            <h2 className="text-2xl font-bold mb-6">Market Trends</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card className="p-6">
+                <h3 className="text-lg font-semibold mb-2">Bitcoin Price (GBP)</h3>
+                {bitcoinLoading ? (
+                  <div className="animate-pulse h-8 bg-muted rounded" />
+                ) : error ? (
+                  <p className="text-red-500">{error}</p>
+                ) : bitcoinPrice ? (
+                  <p className="text-2xl font-bold">{formatCurrency(bitcoinPrice)}</p>
+                ) : (
+                  <p className="text-muted-foreground">Price unavailable</p>
+                )}
+              </Card>
+              {/* Add other market trend cards here */}
+            </div>
+          </div>
         </div>
       </div>
     </section>

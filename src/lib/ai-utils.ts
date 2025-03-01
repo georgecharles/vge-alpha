@@ -142,4 +142,80 @@ export async function getInvestmentStrategy(investorProfile: any) {
       expected_returns: "8-12% annual return potential"
     };
   }
+}
+
+export async function getPropertyAnalysis(property: any) {
+  const ai = await initializeAI();
+  const model = ai.getGenerativeModel({ model: "gemini-pro" });
+
+  const prompt = `
+    As a UK property expert, analyze this property:
+    Property Type: ${property.property_type}
+    Details: ${property.bedroom} bedrooms, ${property.bathroom} bathrooms
+    Size: ${property.square_footage} sq ft
+    Location: ${property.city}
+    Price: £${property.price}
+
+    Respond with a JSON object in exactly this format:
+    {
+      "market_value_analysis": "Brief analysis of the property's market value",
+      "investment_potential": "Analysis of investment potential",
+      "key_advantages": ["Advantage 1", "Advantage 2", "Advantage 3"],
+      "considerations": ["Consideration 1", "Consideration 2", "Consideration 3"],
+      "recommendation": "Brief recommendation"
+    }
+    Keep the response strictly in this JSON format with no additional text.
+  `;
+
+  try {
+    console.log('Sending prompt to Gemini:', prompt);
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text().trim();
+    console.log('Raw Gemini response:', text);
+    
+    // Clean and parse the response
+    const cleanedText = sanitizeJsonString(text);
+    console.log('Cleaned response:', cleanedText);
+    
+    const parsedData = JSON.parse(cleanedText);
+    
+    // Validate the response structure
+    if (!parsedData.market_value_analysis || 
+        !parsedData.investment_potential || 
+        !Array.isArray(parsedData.key_advantages) || 
+        !Array.isArray(parsedData.considerations) || 
+        !parsedData.recommendation) {
+      console.error('Invalid response structure:', parsedData);
+      throw new Error('Invalid response structure from AI');
+    }
+
+    return {
+      market_value_analysis: parsedData.market_value_analysis,
+      investment_potential: parsedData.investment_potential,
+      key_advantages: parsedData.key_advantages.slice(0, 3),
+      considerations: parsedData.considerations.slice(0, 3),
+      recommendation: parsedData.recommendation
+    };
+  } catch (error) {
+    console.error("Error in getPropertyAnalysis:", error);
+    console.error("Property data:", property);
+    
+    // More specific fallback data based on the property
+    return {
+      market_value_analysis: `This ${property.property_type} property in ${property.city} requires detailed market analysis.`,
+      investment_potential: `${property.bedroom} bedroom property with potential for rental or resale value appreciation.`,
+      key_advantages: [
+        `${property.bedroom} bedrooms suitable for the local market`,
+        `${property.square_footage} sq ft offering good space`,
+        `Located in ${property.city}`
+      ],
+      considerations: [
+        "Current market conditions",
+        "Property condition assessment needed",
+        "Local area development plans"
+      ],
+      recommendation: `Consider viewing this ${property.property_type} property for a detailed assessment.`
+    };
+  }
 } 

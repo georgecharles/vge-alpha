@@ -4,14 +4,14 @@ export interface Deal {
   id: string;
   title: string;
   description: string;
-  type: string;
-  status: string;
+  type: 'bmv' | 'development' | 'flip' | 'rental';
+  status: 'available' | 'sold' | 'under offer';
   original_price: number;
   deal_price: number;
   potential_profit: number;
   roi_percentage: number;
   is_premium: boolean;
-  images: string[] | string;
+  images: string[];
   location: {
     address?: string;
     city?: string;
@@ -25,63 +25,133 @@ export interface Deal {
 export const getDeals = async (page = 1, limit = 6) => {
   const start = (page - 1) * limit;
   
+  console.log('Fetching deals:', { page, limit, start });
+
   const { data, error } = await supabase
     .from('deals')
-    .select('*')
+    .select(`
+      id,
+      title,
+      description,
+      type,
+      status,
+      original_price,
+      deal_price,
+      potential_profit,
+      roi_percentage,
+      is_premium,
+      images,
+      location,
+      key_features,
+      created_at
+    `)
     .range(start, start + limit - 1)
     .order('created_at', { ascending: false });
+
+  console.log('Supabase deals response:', { data, error });
 
   if (error) {
     console.error('Error fetching deals:', error);
     throw error;
   }
 
-  // Transform the data to parse JSON strings
-  const transformedData = data?.map(deal => ({
+  // Transform the data
+  const transformedData = (data || []).map(deal => ({
     ...deal,
-    images: typeof deal.images === 'string' 
-      ? JSON.parse(deal.images.replace(/\\/g, '')) // Remove escaped characters
-      : deal.images
+    images: Array.isArray(deal.images) ? deal.images : [deal.images].filter(Boolean),
+    location: typeof deal.location === 'string' ? JSON.parse(deal.location) : (deal.location || {}),
+    key_features: Array.isArray(deal.key_features) ? deal.key_features : []
   }));
 
-  console.log('Transformed data:', transformedData);
-
-  return transformedData || [];
+  return transformedData;
 };
 
 export const searchDeals = async (searchTerm: string): Promise<Deal[]> => {
-  const { data: deals, error } = await supabase
+  console.log('Searching deals with term:', searchTerm);
+  const term = searchTerm.toLowerCase().trim();
+
+  const { data, error } = await supabase
     .from('deals')
-    .select(`
-      *,
-      images
-    `)
-    .or(`title.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+    .select('*')
+    .or(
+      `title.ilike.%${term}%,` +
+      `description.ilike.%${term}%,` +
+      `type.ilike.%${term}%,` +
+      `status.ilike.%${term}%`
+    )
     .order('created_at', { ascending: false });
+
+  console.log('Search response:', { data, error });
 
   if (error) {
     console.error('Error searching deals:', error);
     return [];
   }
 
-  // Transform the data to match the expected format
-  const transformedDeals = deals?.map(deal => ({
-    ...deal,
-    images: Array.isArray(deal.images) ? deal.images : [deal.images],
-  })) || [];
+  // Transform and filter the data to include location search
+  const transformedDeals = (data || [])
+    .map(deal => ({
+      id: deal.id,
+      title: deal.title,
+      description: deal.description,
+      type: deal.type,
+      status: deal.status,
+      original_price: deal.original_price,
+      deal_price: deal.deal_price,
+      potential_profit: deal.potential_profit,
+      roi_percentage: deal.roi_percentage,
+      is_premium: deal.is_premium,
+      images: Array.isArray(deal.images) ? deal.images : [deal.images].filter(Boolean),
+      location: typeof deal.location === 'string' ? JSON.parse(deal.location) : (deal.location || {}),
+      key_features: Array.isArray(deal.key_features) ? deal.key_features : [],
+      created_at: deal.created_at
+    }))
+    .filter(deal => {
+      // Additional client-side filtering for location and key features
+      const locationStr = [
+        deal.location?.address,
+        deal.location?.city,
+        deal.location?.postcode
+      ].filter(Boolean).join(' ').toLowerCase();
+
+      const keyFeaturesStr = deal.key_features.join(' ').toLowerCase();
+
+      return (
+        locationStr.includes(term) ||
+        keyFeaturesStr.includes(term)
+      );
+    });
+
+  console.log('Transformed deals:', transformedDeals);
 
   return transformedDeals;
 };
 
 export const getDeal = async (id: string): Promise<Deal | null> => {
+  console.log('Fetching deal:', id);
+
   const { data: deal, error } = await supabase
     .from('deals')
     .select(`
-      *,
-      images
+      id,
+      title,
+      description,
+      type,
+      status,
+      original_price,
+      deal_price,
+      potential_profit,
+      roi_percentage,
+      is_premium,
+      images,
+      location,
+      key_features,
+      created_at
     `)
     .eq('id', id)
     .single();
+
+  console.log('Deal fetch result:', { deal, error });
 
   if (error) {
     console.error('Error fetching deal:', error);
@@ -90,9 +160,11 @@ export const getDeal = async (id: string): Promise<Deal | null> => {
 
   if (!deal) return null;
 
-  // Transform the data to match the expected format
+  // Transform the data
   return {
     ...deal,
-    images: Array.isArray(deal.images) ? deal.images : [deal.images],
+    images: Array.isArray(deal.images) ? deal.images : [deal.images].filter(Boolean),
+    location: typeof deal.location === 'string' ? JSON.parse(deal.location) : (deal.location || {}),
+    key_features: Array.isArray(deal.key_features) ? deal.key_features : []
   };
 }; 

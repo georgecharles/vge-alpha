@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "./ui/button";
-import { LogIn, Menu } from "lucide-react";
+import { LogIn, Menu, MessageCircle } from "lucide-react";
 import { MobileNav } from "./MobileNav";
 import {
   NavigationMenu,
@@ -55,10 +55,10 @@ const Header = ({
 }: HeaderProps) => {
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const navigate = useNavigate();
-  const { user, profile, signOut, loading } = useAuth();
+  const { signOut, isLoading } = useAuth();
 
   const handleSignOut = async () => {
-    console.log("Sign out button clicked"); // Add this line
+    console.log("Sign out button clicked");
     try {
       await signOut();
       navigate("/");
@@ -95,8 +95,8 @@ const Header = ({
   });
   ListItem.displayName = "ListItem";
 
-  if (loading) {
-    return <div>Loading...</div>; // Or your loading component
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
 
   return (
@@ -270,6 +270,10 @@ const Header = ({
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
+                      <DropdownMenuItem className="bg-white hover:bg-muted" onClick={() => navigate("/messages")}>
+                        <MessageCircle className="mr-2 h-4 w-4" />
+                        <span>Messages</span>
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="bg-white hover:bg-muted" onClick={handleSignOut}>
                         <LogOut className="mr-2 h-4 w-4" />
@@ -355,6 +359,12 @@ const Header = ({
             className="block text-lg font-medium hover:text-primary transition-colors"
           >
             About Us
+          </a>
+          <a
+            href="/messages"
+            className="block text-lg font-medium hover:text-primary transition-colors"
+          >
+            Messages
           </a>
           {!isAuthenticated ? (
             <div className="space-y-4 pt-6">

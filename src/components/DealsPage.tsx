@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "../lib/auth";
-import { useNavigate } from "react-router-dom";
 import { getDeals } from "../lib/deals";
 import type { Deal } from "../lib/deals";
 import { DealCard } from "./DealCard";
@@ -8,10 +7,17 @@ import { DealModal } from "./DealModal";
 import { Layout } from "./Layout";
 import { PageTransition } from "./ui/page-transition";
 import HeroSection from "./HeroSection";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { LogIn, UserPlus } from "lucide-react";
 
-export default function DealsPage() {
+interface DealsPageProps {
+  onSignIn?: () => void;
+  onSignUp?: () => void;
+}
+
+export default function DealsPage({ onSignIn, onSignUp }: DealsPageProps) {
   const { user, profile, isLoading } = useAuth();
-  const navigate = useNavigate();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
@@ -20,13 +26,9 @@ export default function DealsPage() {
     let mounted = true;
 
     async function loadDeals() {
-      if (!user) return;
-      
       try {
-        console.log('Loading deals for user:', user.id); // Debug log
         const dealsData = await getDeals();
         if (mounted) {
-          console.log('Deals loaded:', dealsData); // Debug log
           setDeals(dealsData);
           setLoading(false);
         }
@@ -38,22 +40,14 @@ export default function DealsPage() {
       }
     }
 
-    if (!isLoading) {
-      if (!user) {
-        console.log('No user, redirecting to login'); // Debug log
-        navigate('/login');
-      } else {
-        console.log('User authenticated, loading deals'); // Debug log
-        loadDeals();
-      }
-    }
+    loadDeals(); // Load deals regardless of auth state
 
     return () => {
       mounted = false;
     };
-  }, [user, isLoading, navigate]);
+  }, []); // Remove user and isLoading from dependencies
 
-  // Show loading state while checking auth
+  // Show loading state
   if (isLoading) {
     return (
       <Layout>
@@ -62,11 +56,6 @@ export default function DealsPage() {
         </div>
       </Layout>
     );
-  }
-
-  // If no user, don't render anything (navigation will handle redirect)
-  if (!user) {
-    return null;
   }
 
   return (
@@ -85,7 +74,48 @@ export default function DealsPage() {
           <main className="container mx-auto px-4 py-8">
             {loading ? (
               <div className="text-center py-8">Loading deals...</div>
+            ) : !user ? (
+              // Paywall for non-authenticated users
+              <div className="max-w-4xl mx-auto">
+                <Card className="p-8 text-center mb-8">
+                  <h2 className="text-2xl font-bold mb-4">Sign in to View Full Deal Details</h2>
+                  <p className="text-muted-foreground mb-8">
+                    Get access to exclusive property deals and investment opportunities. 
+                    Create an account or sign in to view all available deals.
+                  </p>
+                  <div className="flex justify-center gap-4">
+                    <Button 
+                      onClick={onSignIn}
+                      className="flex items-center gap-2"
+                    >
+                      <LogIn className="w-4 w-4" />
+                      Sign In
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={onSignUp}
+                      className="flex items-center gap-2"
+                    >
+                      <UserPlus className="w-4 w-4" />
+                      Create Account
+                    </Button>
+                  </div>
+                </Card>
+
+                {/* Show preview of deals */}
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                  {deals.map((deal) => (
+                    <DealCard 
+                      key={deal.id} 
+                      deal={deal}
+                      isSubscriber={false}
+                      onClick={onSignIn}
+                    />
+                  ))}
+                </div>
+              </div>
             ) : (
+              // Full access for authenticated users
               <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                 {deals.map((deal) => (
                   <DealCard 

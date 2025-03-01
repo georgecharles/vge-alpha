@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { ScrollArea } from './ui/scroll-area';
 import { useToast } from './ui/use-toast';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Send } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -29,33 +29,83 @@ interface Message {
   content: string;
   sender_id: string;
   created_at: string;
+  conversation_id: string;
   sender?: {
     full_name: string;
     avatar_url: string;
   };
 }
 
-interface Conversation {
-  id: string;
-  participants: {
-    user_id: string;
-    profile: {
-      full_name: string;
-      avatar_url: string;
-    };
-  }[];
-  last_message?: Message;
+interface Profile {
+  full_name: string;
+  avatar_url: string | null;
 }
 
+interface ConversationParticipant {
+  user_id: string;
+  profile: Profile;
+}
+
+interface SupabaseProfile {
+  full_name: string;
+  avatar_url: string | null;
+}
+
+interface DatabaseParticipant {
+  user_id: string;
+  profile: {
+    full_name: string;
+    avatar_url: string | null;
+  };
+}
+
+interface SupabaseParticipant {
+  user_id: string;
+  profile: SupabaseProfile;
+}
+
+interface Conversation {
+  id: string;
+  participants: ConversationParticipant[];
+  last_message?: {
+    id: string;
+    content: string;
+    sender_id: string;
+    created_at: string;
+  };
+}
+
+function isValidParticipant(participant: any): participant is DatabaseParticipant {
+  return (
+    participant &&
+    typeof participant.user_id === 'string' &&
+    participant.profile &&
+    typeof participant.profile.full_name === 'string' &&
+    (participant.profile.avatar_url === null || typeof participant.profile.avatar_url === 'string')
+  );
+}
+
+const transformParticipants = (participants: any[]): ConversationParticipant[] => {
+  return participants
+    .filter(isValidParticipant)
+    .map(p => ({
+      user_id: p.user_id,
+      profile: {
+        full_name: p.profile.full_name,
+        avatar_url: p.profile.avatar_url
+      }
+    }));
+};
+
 export default function Messages() {
-  const { user, profile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<UserProfile[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -66,30 +116,87 @@ export default function Messages() {
 
     // Fetch conversations
     const fetchConversations = async () => {
-      const { data, error } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          participants:conversation_participants(
-            user_id,
-            profile:profiles(full_name, avatar_url)
-          ),
-          last_message:messages(
+      try {
+        console.log('Fetching conversations for user:', user?.id);
+
+        // First get all conversations for the user
+        const { data: participants, error: participantsError } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .eq('user_id', user?.id);
+
+        if (participantsError) {
+          console.error('Error fetching participants:', participantsError);
+          throw participantsError;
+        }
+
+        console.log('Found participant records:', participants);
+
+        if (!participants?.length) {
+          console.log('No conversations found');
+          setConversations([]);
+          setIsLoading(false);
+          return;
+        }
+
+        const conversationIds = participants.map(p => p.conversation_id);
+        console.log('Conversation IDs:', conversationIds);
+
+        // Then get the conversation details
+        const { data: conversations, error: conversationsError } = await supabase
+          .from('conversations')
+          .select(`
             id,
-            content,
-            sender_id,
-            created_at
-          )
-        `)
-        .order('updated_at', { ascending: false });
+            created_at,
+            participants:conversation_participants!inner (
+              user_id,
+              profile:profiles!inner (
+                full_name,
+                avatar_url
+              )
+            ),
+            messages (
+              id,
+              content,
+              sender_id,
+              created_at
+            )
+          `)
+          .in('id', conversationIds)
+          .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching conversations:', error);
-        return;
+        if (conversationsError) {
+          console.error('Error fetching conversations:', conversationsError);
+          throw conversationsError;
+        }
+
+        console.log('Raw conversations data:', conversations);
+
+        const transformedData: Conversation[] = (conversations || []).map(conv => {
+          // Get the last message if any exist
+          const lastMessage = conv.messages && conv.messages.length > 0 
+            ? conv.messages[conv.messages.length - 1] 
+            : undefined;
+
+          return {
+            id: conv.id,
+            participants: transformParticipants(conv.participants),
+            last_message: lastMessage
+          };
+        });
+
+        console.log('Transformed conversations:', transformedData);
+        setConversations(transformedData);
+      } catch (error) {
+        console.error('Error in fetchConversations:', error);
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to load conversations",
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
-
-      setConversations(data || []);
-      setIsLoading(false);
     };
 
     fetchConversations();
@@ -186,7 +293,7 @@ export default function Messages() {
       const { data, error } = await supabase
         .from('profiles')
         .select('id, full_name, avatar_url, email')
-        .neq('id', user?.id) // Don't include current user
+        .neq('id', user?.id)
         .or(`full_name.ilike.%${term}%,email.ilike.%${term}%`)
         .limit(5);
 
@@ -206,25 +313,64 @@ export default function Messages() {
 
   const startConversation = async (otherUser: UserProfile) => {
     try {
-      // Check if conversation already exists
-      const { data: existingConvos } = await supabase
-        .from('conversations')
-        .select(`
-          id,
-          participants:conversation_participants(user_id)
-        `)
-        .contains('participants', [{ user_id: user?.id }, { user_id: otherUser.id }]);
+      // Check for existing conversation more efficiently
+      const { data: existingParticipations, error: checkError } = await supabase
+        .from('conversation_participants')
+        .select('conversation_id')
+        .eq('user_id', user?.id);
 
-      if (existingConvos?.length) {
-        setSelectedConversation(existingConvos[0]);
-        setIsNewChatOpen(false);
-        return;
+      if (checkError) throw checkError;
+
+      if (existingParticipations?.length) {
+        const { data: existingConvo, error: existingError } = await supabase
+          .from('conversation_participants')
+          .select('conversation_id')
+          .in('conversation_id', existingParticipations.map(p => p.conversation_id))
+          .eq('user_id', otherUser.id)
+          .single();
+
+        if (existingError && existingError.code !== 'PGRST116') { // Ignore "no rows returned" error
+          throw existingError;
+        }
+
+        if (existingConvo) {
+          // Fetch full conversation details
+          const { data: fullConvo, error: fetchError } = await supabase
+            .from('conversations')
+            .select(`
+              id,
+              participants:conversation_participants(
+                user_id,
+                profile:profiles(
+                  full_name,
+                  avatar_url
+                )
+              )
+            `)
+            .eq('id', existingConvo.conversation_id)
+            .single();
+
+          if (fetchError) throw fetchError;
+
+          if (fullConvo) {
+            const transformedConvo: Conversation = {
+              id: fullConvo.id,
+              participants: transformParticipants(fullConvo.participants)
+            };
+            setSelectedConversation(transformedConvo);
+            setIsNewChatOpen(false);
+            return;
+          }
+        }
       }
 
       // Create new conversation
       const { data: newConvo, error: convoError } = await supabase
         .from('conversations')
-        .insert({})
+        .insert({
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        })
         .select()
         .single();
 
@@ -234,40 +380,64 @@ export default function Messages() {
       const { error: participantsError } = await supabase
         .from('conversation_participants')
         .insert([
-          { conversation_id: newConvo.id, user_id: user?.id },
-          { conversation_id: newConvo.id, user_id: otherUser.id }
+          {
+            conversation_id: newConvo.id,
+            user_id: user?.id,
+            created_at: new Date().toISOString()
+          },
+          {
+            conversation_id: newConvo.id,
+            user_id: otherUser.id,
+            created_at: new Date().toISOString()
+          }
         ]);
 
       if (participantsError) throw participantsError;
 
-      // Refresh conversations
-      const { data: updatedConvo } = await supabase
+      // Fetch the complete conversation
+      const { data: updatedConvo, error: fetchError } = await supabase
         .from('conversations')
         .select(`
           id,
           participants:conversation_participants(
             user_id,
-            profile:profiles(full_name, avatar_url)
+            profile:profiles(
+              full_name,
+              avatar_url
+            )
           )
         `)
         .eq('id', newConvo.id)
         .single();
 
-      if (updatedConvo) {
-        setConversations(prev => [updatedConvo, ...prev]);
-        setSelectedConversation(updatedConvo);
-      }
+      if (fetchError) throw fetchError;
 
-      setIsNewChatOpen(false);
-    } catch (error) {
+      if (updatedConvo) {
+        const transformedConvo: Conversation = {
+          id: updatedConvo.id,
+          participants: transformParticipants(updatedConvo.participants)
+        };
+
+        setConversations(prev => [transformedConvo, ...prev]);
+        setSelectedConversation(transformedConvo);
+        setIsNewChatOpen(false);
+        
+        toast({
+          title: "Success",
+          description: "New conversation started"
+        });
+      }
+    } catch (error: any) {
       console.error('Error starting conversation:', error);
       toast({
         title: "Error",
-        description: "Failed to start conversation",
+        description: error.message || "Failed to start conversation. Please try again.",
         variant: "destructive"
       });
     }
   };
+
+  if (!user) return null;
 
   return (
     <Layout>
@@ -309,7 +479,7 @@ export default function Messages() {
                           onClick={() => startConversation(result)}
                         >
                           <Avatar>
-                            <AvatarImage src={result.avatar_url} />
+                            <AvatarImage src={result.avatar_url || undefined} />
                             <AvatarFallback>
                               {result.full_name.charAt(0)}
                             </AvatarFallback>
@@ -347,7 +517,7 @@ export default function Messages() {
                       .map(participant => (
                         <div key={participant.user_id} className="flex items-center gap-3">
                           <Avatar>
-                            <AvatarImage src={participant.profile.avatar_url} />
+                            <AvatarImage src={participant.profile.avatar_url || undefined} />
                             <AvatarFallback>
                               {participant.profile.full_name.charAt(0)}
                             </AvatarFallback>
@@ -405,13 +575,15 @@ export default function Messages() {
                         onChange={e => setNewMessage(e.target.value)}
                         placeholder="Type a message..."
                       />
-                      <Button type="submit">Send</Button>
+                      <Button type="submit" size="icon">
+                        <Send className="h-4 w-4" />
+                      </Button>
                     </div>
                   </form>
                 </div>
               ) : (
                 <div className="h-[600px] flex items-center justify-center text-muted-foreground">
-                  Select a conversation to start messaging
+                  Select a conversation or start a new one
                 </div>
               )}
             </CardContent>

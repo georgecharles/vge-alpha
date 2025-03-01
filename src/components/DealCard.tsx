@@ -4,6 +4,8 @@ import { formatCurrency } from "../lib/utils";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { MapPin } from "lucide-react";
+import { useAuth } from "../lib/auth";
+import { useNavigate } from "react-router-dom";
 
 interface DealCardProps {
   deal: Deal;
@@ -12,6 +14,8 @@ interface DealCardProps {
 }
 
 export function DealCard({ deal, isSubscriber, onClick }: DealCardProps) {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [, setImageError] = React.useState(false);
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   
@@ -42,7 +46,7 @@ export function DealCard({ deal, isSubscriber, onClick }: DealCardProps) {
   return (
     <div 
       className="border rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-      onClick={onClick}
+      onClick={user ? onClick : () => navigate('/login')}
     >
       <Card className="overflow-hidden">
         <div className="relative aspect-video overflow-hidden bg-muted">
@@ -52,14 +56,19 @@ export function DealCard({ deal, isSubscriber, onClick }: DealCardProps) {
             className="object-cover w-full h-full"
             onError={handleImageError}
           />
-          {deal.is_premium && !isSubscriber && (
+          {!user && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <Badge variant="secondary">Sign in to View</Badge>
+            </div>
+          )}
+          {user && deal.is_premium && !isSubscriber && (
             <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
               <Badge variant="premium">Premium Deal</Badge>
             </div>
           )}
           <Badge 
             className="absolute top-2 right-2" 
-            variant={deal.status === 'available' ? 'success' : deal.status === 'under offer' ? 'warning' : 'secondary'}
+            variant={deal.status === 'available' ? 'success' : 'warning'}
           >
             {deal.status}
           </Badge>

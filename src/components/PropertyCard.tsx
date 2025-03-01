@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { MessageCircle, Lock } from "lucide-react";
 import { BitcoinPrice } from "./BitcoinPrice";
 import { formatCurrency } from "../lib/utils";
+import { useBitcoinPrice } from '../hooks/useBitcoinPrice';
 
 const PROPERTY_FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
@@ -65,31 +66,13 @@ const PropertyCard = ({
   createdAt,
 }: PropertyCardProps) => {
   const [isImageLoading, setIsImageLoading] = React.useState(true);
-  const [btcPrice, setBtcPrice] = useState<number | null>(null);
+  const { btcEquivalent, error: btcError, isLoading: isLoadingBtc } = useBitcoinPrice(price);
 
   const fallbackImage = React.useMemo(() => {
     const fallbackImages =
       type === "deal" ? DEAL_FALLBACK_IMAGES : PROPERTY_FALLBACK_IMAGES;
     return fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
   }, [type]);
-
-  useEffect(() => {
-    const fetchBtcPrice = async () => {
-      try {
-        const response = await fetch('https://api.coindesk.com/v1/bpi/currentprice/GBP.json');
-        const data = await response.json();
-        const btcToGbp = data.bpi.GBP.rate_float;
-        setBtcPrice(price / btcToGbp);
-      } catch (error) {
-        console.error('Error fetching BTC price:', error);
-      }
-    };
-
-    fetchBtcPrice();
-    const interval = setInterval(fetchBtcPrice, 60000); // Update every minute
-
-    return () => clearInterval(interval);
-  }, [price]);
 
   return (
     <Card
@@ -130,13 +113,12 @@ const PropertyCard = ({
           <div className="flex items-baseline gap-2">
             <span className="text-2xl font-bold">
               {formatCurrency(price)}
-              {btcPrice && (
+              {btcEquivalent && !isLoadingBtc && !btcError && (
                 <span className="text-sm text-muted-foreground ml-2">
-                  ≈ {btcPrice.toFixed(8)} BTC
+                  ≈ {btcEquivalent.toFixed(2)} BTC
                 </span>
               )}
             </span>
-            <BitcoinPrice amount={price} />
           </div>
         </div>
 

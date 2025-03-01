@@ -22,6 +22,10 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const redirectUrl = import.meta.env.MODE === 'production' 
+  ? 'https://myvge.com/auth/callback'
+  : 'http://localhost:5173/auth/callback';
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -51,46 +55,74 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
-    const initAuth = async () => {
+    let mounted = true;
+
+    // Initialize auth state
+    const initializeAuth = async () => {
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession();
-        if (session?.user) {
-          setUser(session.user);
-          await fetchProfile(session.user.id);
+        // Get current session
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) throw error;
+
+        if (mounted) {
+          if (session?.user) {
+            setUser(session.user);
+            await fetchProfile(session.user.id);
+          } else {
+            setUser(null);
+            setProfile(null);
+          }
+          setIsLoading(false);
         }
+
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (event, session) => {
+            console.log('Auth state change:', event, session); // Debug log
+            
+            if (mounted) {
+              if (session?.user) {
+                setUser(session.user);
+                await fetchProfile(session.user.id);
+              } else {
+                setUser(null);
+                setProfile(null);
+              }
+              setIsLoading(false);
+            }
+          }
+        );
+
+        return () => {
+          mounted = false;
+          subscription.unsubscribe();
+        };
       } catch (error) {
-        console.error("Error initializing auth:", error);
-      } finally {
-        setIsLoading(false);
+        console.error('Error initializing auth:', error);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
     };
 
-    initAuth();
+    initializeAuth();
+  }, []);
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state change:", event, session); // Keep this for debugging
-      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+  // Add a session recovery effect
+  useEffect(() => {
+    const recoverSession = async () => {
+      if (!user) {
+        const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           setUser(session.user);
           await fetchProfile(session.user.id);
         }
-      } else if (event === "SIGNED_OUT") {
-        setUser(null);
-        setProfile(null);
-        localStorage.removeItem("password-protected"); // Clear password protection
-        localStorage.removeItem("supabase.auth.token"); // Clear supabase token
-        localStorage.removeItem("supabase.auth.session"); // Clear supabase session
-        window.location.href = "/"; // Use window.location.href for redirect
       }
-      setIsLoading(false);
-    });
+    };
 
-    return () => subscription.unsubscribe();
-  }, []);
+    recoverSession();
+  }, [user]);
 
   async function signUp(
     email: string,
@@ -107,7 +139,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             first_name: firstName,
             last_name: lastName,
           },
-          emailRedirectTo: "https://myvge.com/auth/callback",
+          emailRedirectTo: redirectUrl,
         },
       });
 
@@ -171,7 +203,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: 'https://myvge.com/auth/callback',
+          redirectTo: redirectUrl,
         }
       });
       if (error) throw error;
@@ -183,14 +215,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function signOut() {
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      await supabase.auth.signOut();
+      
+      // Clear auth state
       setUser(null);
       setProfile(null);
-      localStorage.removeItem("password-protected"); // Clear password protection
-      localStorage.removeItem("supabase.auth.token"); // Clear supabase session
-      localStorage.removeItem("supabase.auth.session"); // Clear supabase session
-      window.location.href = "/"; // Use window.location.href for redirect
+      
+      // Clear storage
+      window.localStorage.clear(); // Clear all localStorage
+      
+      // Redirect
+      window.location.href = "/";
     } catch (error) {
       console.error("Sign out error:", error);
       throw error;
@@ -203,7 +238,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     signIn,
     signUp,
-    signInWithGoogle, // Add to context
+    signInWithGoogle,
     signOut,
   };
 

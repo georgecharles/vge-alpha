@@ -55,7 +55,7 @@ const Header = ({
 }: HeaderProps) => {
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { user, profile, signOut, loading } = useAuth();
 
   const handleSignOut = async () => {
     console.log("Sign out button clicked"); // Add this line
@@ -94,6 +94,10 @@ const Header = ({
     );
   });
   ListItem.displayName = "ListItem";
+
+  if (loading) {
+    return <div>Loading...</div>; // Or your loading component
+  }
 
   return (
     <>

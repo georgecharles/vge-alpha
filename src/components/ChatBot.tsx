@@ -66,6 +66,9 @@ const formatMessage = (text: string) => {
   )).join('');
 };
 
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+
 export function ChatBot() {
   const { user, profile } = useAuth();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -150,74 +153,118 @@ export function ChatBot() {
     if (!text.trim()) return;
 
     if (activeTab === "ai") {
-      // AI Assistant
+      // AI chat allowed without sign in
       setAiMessages((prev) => [...prev, { text, isUser: true }]);
       setInput("");
       setIsLoading(true);
 
       try {
-        const response = await getChatResponse(text);
-        setAiMessages((prev) => [...prev, { text: response, isUser: false }]);
-
-        // Store AI response in Supabase (sender_id will be null for AI)
-        const { error: aiError } = await supabase.from("messages").insert([
+        // Get AI response without storing in database
+        const aiResponse = await fetch(
+          `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`,
           {
-            sender_id: user?.id,
-            receiver_id: user?.id, // or a specific support user ID
-            content: text,
-            is_support: false,
-          },
-          {
-            sender_id: null, // AI has no sender ID
-            receiver_id: user?.id,
-            content: response,
-            is_support: false,
-          },
-        ]);
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [{
+                parts: [{
+                  text: text
+                }]
+              }]
+            }),
+          }
+        );
 
-        if (aiError) {
-          console.error("Supabase insert error (AI):", aiError);
+        if (!aiResponse.ok) {
+          throw new Error(`AI API error: ${aiResponse.status}`);
         }
+
+        const aiData = await aiResponse.json();
+        const response = aiData.candidates[0].content.parts[0].text;
+
+        // Only store messages if user is signed in
+        if (user) {
+          const conversationId = `ai_${user.id}_${Date.now()}`;
+          
+          await supabase.from("messages").insert([
+            {
+              sender_id: user.id,
+              receiver_id: user.id,
+              content: text,
+              is_support: false,
+              conversation_id: conversationId
+            },
+            {
+              sender_id: null,
+              receiver_id: user.id,
+              content: response,
+              is_support: true,
+              conversation_id: conversationId
+            }
+          ]);
+        }
+
+        setAiMessages((prev) => [...prev, { text: response, isUser: false }]);
       } catch (error) {
-        console.error("Error sending message:", error);
+        console.error("Error in AI chat:", error);
+        setAiMessages((prev) => [
+          ...prev,
+          { text: "Sorry, I encountered an error. Please try again.", isUser: false }
+        ]);
       } finally {
         setIsLoading(false);
       }
+    } else if (!user) {
+      // Require sign in for support and direct messages
+      setAiMessages((prev) => [
+        ...prev,
+        { text: "Please sign in to use support and direct messaging features.", isUser: false }
+      ]);
+      return;
     } else if (activeTab === "support") {
       // Handle support messages
       setSupportMessages((prev) => [...prev, { text, isUser: true }]);
       setInput("");
 
-      if (user) {
-        try {
-          // Store support message in Supabase
-          const { error } = await supabase.from("messages").insert([
-            {
-              sender_id: user.id,
-              receiver_id: "support", // You might want to use a specific support user ID
-              content: text,
-              is_support: true,
-            },
-          ]);
+      try {
+        const supportConversationId = `support_${user.id}_${Date.now()}`;
 
-          if (error) {
-            console.error("Error sending support message:", error);
-          }
-        } catch (error) {
-          console.error("Error sending support message:", error);
-        }
-      }
+        // Insert user's support message
+        const { error: userMsgError } = await supabase.from("messages").insert({
+          sender_id: user.id,
+          receiver_id: 'support',
+          content: text,
+          is_support: true,
+          conversation_id: supportConversationId
+        });
 
-      // You might want to add an automatic response or connect to a support system
-      setTimeout(() => {
+        if (userMsgError) throw userMsgError;
+
+        // Insert automated support response
+        const autoResponse = "Thank you for your message. Our support team will get back to you soon.";
+        const { error: supportError } = await supabase.from("messages").insert({
+          sender_id: null,
+          receiver_id: user.id,
+          content: autoResponse,
+          is_support: true,
+          conversation_id: supportConversationId
+        });
+
+        if (supportError) throw supportError;
+
         setSupportMessages((prev) => [
           ...prev,
-          {
-            text: "Thank you for your message. Our support team will get back to you soon.",
-            isUser: false,
-          },
+          { text: autoResponse, isUser: false }
         ]);
-      }, 1000);
+      } catch (error) {
+        console.error("Error handling support message:", error);
+        setSupportMessages((prev) => [
+          ...prev,
+          { text: "Sorry, there was an error sending your message. Please try again.", isUser: false }
+        ]);
+      }
     } else {
       // Direct Message or Support
       if (!user || !selectedContact) return;

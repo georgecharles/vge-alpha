@@ -44,6 +44,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function fetchProfile(userId: string) {
     try {
       console.log('Fetching profile for user:', userId);
+      console.log('Using Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
         .select(PROFILE_SELECT)
@@ -52,6 +53,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (profileError) {
         console.error("Error fetching profile:", profileError);
+        console.error("Supabase config:", {
+          url: import.meta.env.VITE_SUPABASE_URL,
+          hasAnonKey: !!import.meta.env.VITE_SUPABASE_ANON_KEY
+        });
         setProfile(null);
         return;
       }

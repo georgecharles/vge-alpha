@@ -65,8 +65,12 @@ const PropertyCard = ({
   const [isImageLoading, setIsImageLoading] = React.useState(true);
   const { btcEquivalent, error: btcError, isLoading: isLoadingBtc } = useBitcoinPrice(price);
 
-  // Check if user has premium access
-  const hasPremiumAccess = profile?.subscription_tier === 'premium';
+  // Add debug logging
+  console.log('Profile in PropertyCard:', profile);
+  console.log('Subscription tier:', profile?.subscription_tier);
+  
+  // More defensive check
+  const hasPremiumAccess = profile?.subscription_tier === 'premium' || false;
 
   const fallbackImage = React.useMemo(() => {
     const fallbackImages =

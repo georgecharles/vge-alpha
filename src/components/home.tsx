@@ -109,32 +109,14 @@ const Home = () => {
         setIsFetchingMore(true);
       }
       
+      console.log('Fetching page:', pageNum);
       const properties = await getFeaturedProperties(pageNum, PROPERTIES_PER_PAGE);
-      
-      // Map the database fields to our Property type with proper type checking
-      const mappedProperties = properties.map(p => ({
-        ...p,
-        bedroom: typeof p.bedroom === 'number' ? p.bedroom : 
-                 typeof p.bedrooms === 'number' ? p.bedrooms : 0,
-        bathroom: typeof p.bathroom === 'number' ? p.bathroom : 
-                  typeof p.bathrooms === 'number' ? p.bathrooms : 0,
-        property_type: p.property_type,
-        id: p.id,
-        address: p.address,
-        city: p.city,
-        postcode: p.postcode,
-        price: p.price,
-        square_footage: p.square_footage,
-        description: p.description,
-        images: p.images,
-        is_premium: p.is_premium,
-        created_at: p.created_at
-      }));
+      console.log('Received properties:', properties);
       
       if (pageNum === 1) {
-        setSearchResults(mappedProperties);
+        setSearchResults(properties);
       } else {
-        setSearchResults(prev => [...prev, ...mappedProperties]);
+        setSearchResults(prev => [...prev, ...properties]);
       }
       
       setHasMore(properties.length === PROPERTIES_PER_PAGE);
@@ -198,22 +180,21 @@ const Home = () => {
     setSearchResults([]); // Clear existing results before search
     try {
       const results = await searchProperties(term);
+      // Map the results to match the Property interface
       const mappedResults = results.map(p => ({
-        ...p,
-        bedroom: p.bedrooms,
-        bathroom: p.bathrooms,
-        property_type: p.property_type,
         id: p.id,
-        address: p.address,
-        city: p.city,
-        postcode: p.postcode,
+        title: p.title,
+        location: p.location,
         price: p.price,
-        square_footage: p.square_footage,
+        sqft: p.sqft,
+        beds: p.beds,
+        baths: p.baths,
         description: p.description,
-        images: p.images,
-        is_premium: p.is_premium,
-        created_at: p.created_at
-      })) as Property[];
+        image_url: p.image_url,
+        is_featured: p.is_featured,
+        created_at: p.created_at,
+        updated_at: p.updated_at
+      }));
       
       setSearchResults(mappedResults);
       setHasMore(false); // Disable infinite scroll for search results
@@ -287,17 +268,17 @@ const Home = () => {
                     className="cursor-pointer hover:opacity-90 transition-opacity"
                   >
                     <PropertyCard
-                      address={`${property.address}, ${property.city}, ${property.postcode}`}
+                      id={property.id}
+                      address={property.location}
                       price={property.price}
-                      squareFootage={property.square_footage}
-                      isPremium={property.is_premium}
-                      isSubscriber={profile?.subscription_tier !== "free"}
-                      bedrooms={property.bedroom}
-                      bathrooms={property.bathroom}
-                      images={property.images}
+                      squareFootage={property.sqft}
+                      bedrooms={property.beds}
+                      bathrooms={property.baths}
+                      isPremium={property.is_featured}
+                      propertyType="residential"
                       description={property.description}
-                      propertyType={property.property_type}
                       createdAt={property.created_at}
+                      images={property.image_url ? [property.image_url] : []}
                     />
                   </div>
                 ))

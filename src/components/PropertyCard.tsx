@@ -4,6 +4,7 @@ import { Button } from "./ui/button";
 import { MessageCircle, Lock } from "lucide-react";
 import { formatCurrency } from "../lib/utils";
 import { useBitcoinPrice } from '../hooks/useBitcoinPrice';
+import { useAuth } from '../lib/auth';
 
 const PROPERTY_FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
@@ -28,7 +29,6 @@ interface PropertyCardProps {
   bedrooms?: number;
   bathrooms?: number;
   isPremium?: boolean;
-  isSubscriber?: boolean;
   assignedUser?: any;
   author?: any;
   type?: string;
@@ -50,7 +50,6 @@ const PropertyCard = ({
   bedrooms = 0,
   bathrooms = 0,
   isPremium = true,
-  isSubscriber = false,
   author,
   type = "property",
   potential_profit,
@@ -62,8 +61,12 @@ const PropertyCard = ({
   propertyType,
   createdAt,
 }: PropertyCardProps) => {
+  const { profile } = useAuth();
   const [isImageLoading, setIsImageLoading] = React.useState(true);
   const { btcEquivalent, error: btcError, isLoading: isLoadingBtc } = useBitcoinPrice(price);
+
+  // Check if user has premium access
+  const hasPremiumAccess = profile?.subscription_tier === 'premium';
 
   const fallbackImage = React.useMemo(() => {
     const fallbackImages =
@@ -92,7 +95,7 @@ const PropertyCard = ({
           className={`w-full h-full object-cover transition-opacity duration-200 ${isImageLoading ? "opacity-0" : "opacity-100"}`}
           onLoad={() => setIsImageLoading(false)}
         />
-        {isPremium && !isSubscriber && (
+        {isPremium && !hasPremiumAccess && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] flex items-center justify-center">
             <div className="text-center p-6">
               <Lock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />

@@ -19,6 +19,7 @@ interface AuthContextType {
   ) => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,14 +32,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [showGoogleSignupModal, setShowGoogleSignupModal] = useState(false);
-  const [pendingGoogleUser, setPendingGoogleUser] = useState<User | null>(null);
+
+  // Update the profile selection fields everywhere
+  const PROFILE_SELECT = `
+    *,
+    subscription_tier,
+    subscription_status,
+    avatar_url
+  `;
 
   async function fetchProfile(userId: string) {
     try {
+      console.log('Fetching profile for user:', userId);
       const { data: profile, error: profileError } = await supabase
         .from("profiles")
-        .select("*, avatar_url")
+        .select(PROFILE_SELECT)
         .eq("id", userId)
         .single();
 
@@ -48,7 +56,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      console.log("Fetched profile:", profile);
+      console.log("Fetched profile data:", profile);
       setProfile(profile);
     } catch (error) {
       console.error("Error fetching profile:", error);
@@ -68,21 +76,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (mounted) {
           if (session?.user) {
             setUser(session.user);
-            // Check if profile exists for this user
+            // Update this query
             const { data: existingProfile } = await supabase
               .from('profiles')
-              .select('*')
+              .select(PROFILE_SELECT)
               .eq('id', session.user.id)
               .single();
 
-            if (!existingProfile) {
-              // New user from Google sign-in
-              console.log('New Google user detected');
-              setPendingGoogleUser(session.user);
-              setShowGoogleSignupModal(true);
-            } else {
-              setProfile(existingProfile);
-            }
+            console.log('Initial profile load:', existingProfile);
+            setProfile(existingProfile);
           }
           setIsLoading(false);
         }
@@ -96,20 +98,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               if (session?.user) {
                 setUser(session.user);
                 
-                // Check if profile exists
+                // Update this query
                 const { data: profile } = await supabase
                   .from('profiles')
-                  .select('*')
+                  .select(PROFILE_SELECT)
                   .eq('id', session.user.id)
                   .single();
 
-                if (!profile && event === 'SIGNED_IN') {
-                  console.log('New Google user detected on auth change');
-                  setPendingGoogleUser(session.user);
-                  setShowGoogleSignupModal(true);
-                } else {
-                  setProfile(profile);
-                }
+                console.log('Profile after auth change:', profile);
+                setProfile(profile);
               } else {
                 setUser(null);
                 setProfile(null);
@@ -134,28 +131,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     initializeAuth();
   }, []);
 
-  // Add this effect to handle Google redirect
+  // Update the Google redirect handler
   useEffect(() => {
     const handleRedirect = async () => {
       const { data: { session }, error } = await supabase.auth.getSession();
       if (error) console.error('Error getting session:', error);
       
       if (session?.user) {
+        // Update this query
         const { data: profile } = await supabase
           .from('profiles')
-          .select('*')
+          .select(PROFILE_SELECT)
           .eq('id', session.user.id)
           .single();
 
-        if (!profile) {
-          console.log('New Google user detected after redirect');
-          setPendingGoogleUser(session.user);
-          setShowGoogleSignupModal(true);
-        }
+        console.log('Profile after Google redirect:', profile);
+        setProfile(profile);
       }
     };
 
-    // Check if this is a redirect from Google
     if (window.location.hash.includes('access_token')) {
       handleRedirect();
     }
@@ -284,6 +278,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id);
+    }
+  };
+
   const value = {
     user,
     profile,
@@ -292,21 +292,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signInWithGoogle,
     signOut,
+    refreshProfile,
   };
 
   return (
     <AuthContext.Provider value={value}>
       {children}
-      {showGoogleSignupModal && pendingGoogleUser && (
-        <GoogleSignupModal
-          isOpen={showGoogleSignupModal}
-          onClose={() => {
-            setShowGoogleSignupModal(false);
-            setPendingGoogleUser(null);
-          }}
-          googleUser={pendingGoogleUser}
-        />
-      )}
     </AuthContext.Provider>
   );
 }

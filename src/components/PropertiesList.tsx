@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabaseClient'; // You'll need to create this
+import { supabase } from '../lib/supabaseClient';
 import PropertyCard from './PropertyCard';
 
 interface Property {
   id: string;
-  price: number;
-  description: string;
-  created_at: string;
-  updated_at: string;
   title: string;
   location: string;
+  price: number;
+  sqft: number;
   beds: number;
   baths: number;
-  sqft: number;
-  image_url: string;
+  description: string;
+  image_url: string | null;
   is_featured: boolean;
+  created_at: string;
+  updated_at: string;
 }
 
 export default function PropertiesList() {
@@ -28,17 +28,18 @@ export default function PropertiesList() {
 
   async function fetchProperties() {
     try {
+      console.log('Fetching properties...');
       const { data, error } = await supabase
         .from('properties')
         .select('*')
-        .eq('is_featured', true)
         .order('created_at', { ascending: false });
+
+      console.log('Fetched data:', data);
+      console.log('Error if any:', error);
 
       if (error) {
         throw error;
       }
-
-      console.log('Fetched properties:', data);
 
       if (data) {
         setProperties(data);
@@ -60,7 +61,7 @@ export default function PropertiesList() {
   }
 
   if (properties.length === 0) {
-    return <div>No featured properties found.</div>;
+    return <div>No properties found. Please add some properties to the database.</div>;
   }
 
   return (
@@ -75,13 +76,12 @@ export default function PropertiesList() {
           bedrooms={property.beds}
           bathrooms={property.baths}
           isPremium={property.is_featured}
-          propertyType="residential" // You might want to add this to your database if needed
+          propertyType="residential"
           description={property.description}
           createdAt={property.created_at}
           images={property.image_url ? [property.image_url] : []}
           onClick={() => {
-            // Handle property click - e.g., navigate to property detail page
-            console.log(`Clicked property ${property.id}`);
+            console.log('Clicked property:', property.id);
           }}
         />
       ))}

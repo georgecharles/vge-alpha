@@ -1,43 +1,73 @@
-import { supabase } from "./supabase";
-import type { Property, SavedProperty } from "../types/database";
+import { supabase } from './supabaseClient';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 
 export interface Property {
   id: string;
-  address: string;
+  title: string;
+  location: string;
   price: number;
-  bedroom: number;
-  bathroom: number;
-  images: string[];
+  sqft: number;
+  beds: number;
+  baths: number;
   description: string;
-  property_type: string;
+  image_url: string;
+  is_featured: boolean;
   created_at: string;
-  city: string;
-  postcode: string;
-  square_footage: number;
-  is_premium: boolean;
+  updated_at: string;
 }
 
-export const getFeaturedProperties = async (page = 1, limit = 6) => {
-  const start = (page - 1) * limit;
-  
-  console.log('Fetching properties:', { page, limit, start });
-  
-  const { data, error } = await supabase
-    .from('properties')
-    .select('*')
-    .range(start, start + limit - 1)
-    .order('created_at', { ascending: false });
+export interface SavedProperty {
+  id: string;
+  user_id: string;
+  property_id: string;
+  notes: string;
+  created_at: string;
+}
 
-  console.log('Supabase response:', { data, error });
+export async function getFeaturedProperties(page: number, perPage: number) {
+  try {
+    const start = (page - 1) * perPage;
+    
+    console.log('Fetching properties with params:', { page, perPage, start });
+    
+    const { data, error } = await supabase
+      .from('properties')
+      .select(`
+        id,
+        title,
+        location,
+        price,
+        sqft,
+        beds,
+        baths,
+        description,
+        image_url,
+        is_featured,
+        created_at,
+        updated_at
+      `)
+      .range(start, start + perPage - 1)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching properties:', error);
-    throw error;
+    console.log('Raw Supabase response:', { data, error });
+
+    if (error) {
+      console.error('Error fetching properties:', error);
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      console.log('No properties found in database');
+      return [];
+    }
+
+    return data as Property[];
+
+  } catch (error) {
+    console.error('Error in getFeaturedProperties:', error);
+    return [];
   }
-
-  return data || [];
-};
+}
 
 export const useFeaturedProperties = (limit = 6) => {
   return useInfiniteQuery({
@@ -52,29 +82,60 @@ export const useFeaturedProperties = (limit = 6) => {
 };
 
 export async function searchProperties(searchTerm: string): Promise<Property[]> {
-  const { data, error } = await supabase
-    .from('properties')
-    .select('*')
-    .or(`address.ilike.%${searchTerm}%,city.ilike.%${searchTerm}%,postcode.ilike.%${searchTerm}%`)
-    .order('created_at', { ascending: false });
+  try {
+    const { data, error } = await supabase
+      .from('properties')
+      .select(`
+        id,
+        title,
+        location,
+        price,
+        sqft,
+        beds,
+        baths,
+        description,
+        image_url,
+        is_featured,
+        created_at,
+        updated_at
+      `)
+      .or(`
+        location.ilike.%${searchTerm}%,
+        description.ilike.%${searchTerm}%,
+        title.ilike.%${searchTerm}%
+      `)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching properties:', error);
+    if (error) throw error;
+    return data || [];
+  } catch (error) {
+    console.error('Error searching properties:', error);
     return [];
   }
-
-  return data || [];
 }
 
-export async function getProperty(id: string) {
+export async function getProperty(id: string): Promise<Property | null> {
   const { data, error } = await supabase
     .from("properties")
-    .select("*")
+    .select(`
+      id,
+      title,
+      location,
+      price,
+      sqft,
+      beds,
+      baths,
+      description,
+      image_url,
+      is_featured,
+      created_at,
+      updated_at
+    `)
     .eq("id", id)
     .single();
 
   if (error) throw error;
-  return data as Property;
+  return data;
 }
 
 export async function saveProperty(

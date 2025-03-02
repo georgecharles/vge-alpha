@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
 import { MessageCircle, Lock } from "lucide-react";
-import { BitcoinPrice } from "./BitcoinPrice";
 import { formatCurrency } from "../lib/utils";
 import { useBitcoinPrice } from '../hooks/useBitcoinPrice';
 
@@ -38,13 +37,13 @@ interface PropertyCardProps {
   roi_percentage?: number;
   images?: string[];
   onMessageAuthor?: (authorId: string) => void;
+  onClick?: () => void;
   description: string;
   propertyType: string;
   createdAt: string;
 }
 
 const PropertyCard = ({
-  id = "1",
   address = "123 Example Street, City, State 12345",
   price = 500000,
   squareFootage = 0,
@@ -52,10 +51,8 @@ const PropertyCard = ({
   bathrooms = 0,
   isPremium = true,
   isSubscriber = false,
-  assignedUser,
   author,
   type = "property",
-  status,
   potential_profit,
   roi_percentage,
   images = [],

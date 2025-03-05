@@ -47,6 +47,52 @@ interface HeaderProps {
   };
 }
 
+const MobileNavLinks = [
+  {
+    title: "Investment Deals",
+    href: "/deals",
+    icon: "💼"
+  },
+  {
+    title: "Market",
+    items: [
+      { title: "Market Trends", href: "/trends", description: "Stay updated with the latest real estate market trends" },
+      { title: "Market Insights", href: "/insights", description: "Deep dive into property market analytics" },
+      { title: "Research & Reports", href: "/research", description: "Access expert analysis and reports" }
+    ],
+    icon: "📊"
+  },
+  {
+    title: "Services",
+    items: [
+      { title: "Property Management", href: "/property-management", description: "Let us take care of your property" },
+      { title: "Investment Opportunities", href: "/investment-opportunities", description: "Discover tailored investment strategies" },
+      { title: "Calculators", href: "/calculators", description: "Calculate your property investment" }
+    ],
+    icon: "🏠"
+  },
+  {
+    title: "Messages",
+    href: "/messages",
+    icon: "💬"
+  },
+  {
+    title: "Pricing",
+    href: "/pricing",
+    icon: "💎"
+  },
+  {
+    title: "Help & Support",
+    href: "/help",
+    icon: "❓"
+  },
+  {
+    title: "About Us",
+    href: "/about-us",
+    icon: "ℹ️"
+  }
+];
+
 const Header = ({
   isAuthenticated = false,
   onSignIn,
@@ -293,98 +339,134 @@ const Header = ({
         onClose={() => setShowMobileMenu(false)}
       >
         <nav className="space-y-6">
-          <a
-            href="/deals"
-            className="block text-lg font-medium hover:text-primary transition-colors"
-          >
-            Investment Deals
-          </a>
-          <div className="space-y-3">
-            <h4 className="text-sm font-medium text-muted-foreground">
-              Resources
-            </h4>
-            <div className="space-y-3 pl-1">
-              <a
-                href="/trends"
-                className="block text-lg font-medium hover:text-primary transition-colors"
-              >
-                Market Trends
-              </a>
-              <a
-                href="/insights"
-                className="block text-lg font-medium hover:text-primary transition-colors"
-              >
-                Market Insights
-              </a>
-              <a
-                href="/research"
-                className="block text-lg font-medium hover:text-primary transition-colors"
-              >
-                Research & Reports
-              </a>
-              <a
-                href="/blog"
-                className="block text-lg font-medium hover:text-primary transition-colors"
-              >
-                Blog
-              </a>
+          {isAuthenticated && (
+            <div className="space-y-4 mb-6">
+              <div className="flex items-center space-x-3 px-2">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.full_name || "")}&background=random`}
+                    alt={userProfile?.full_name || "User avatar"}
+                  />
+                  <AvatarFallback className="bg-primary/10">
+                    {userProfile?.full_name
+                      ?.split(" ")
+                      .filter(Boolean)
+                      .map((n) => n[0])
+                      .slice(0, 2)
+                      .join("")
+                      .toUpperCase() || "U"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 overflow-hidden">
+                  <p className="text-sm font-medium leading-none truncate">
+                    {userProfile?.full_name}
+                  </p>
+                  <p className="text-sm text-muted-foreground truncate">
+                    {userProfile?.email}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  className="justify-center rounded-full"
+                  onClick={() => {
+                    navigate('/dashboard');
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <LayoutDashboard className="mr-2 h-4 w-4" />
+                  Dashboard
+                </Button>
+                <Button
+                  variant="outline"
+                  className="justify-center rounded-full"
+                  onClick={() => {
+                    navigate('/account');
+                    setShowMobileMenu(false);
+                  }}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  Account
+                </Button>
+              </div>
+              <div className="border-b border-border" />
             </div>
-          </div>
-          <a
-            href="/calculators"
-            className="block text-lg font-medium hover:text-primary transition-colors"
-          >
-            Calculators
-          </a>
-          <a
-            href="/pricing"
-            className="block text-lg font-medium hover:text-primary transition-colors"
-          >
-            Pricing
-          </a>
-          <a
-            href="/property-management"
-            className="block text-lg font-medium hover:text-primary transition-colors"
-          >
-            Property Management
-          </a>
-          <a
-            href="/investment-opportunities"
-            className="block text-lg font-medium hover:text-primary transition-colors"
-          >
-            Investment Opportunities
-          </a>
-          <a
-            href="/about-us"
-            className="block text-lg font-medium hover:text-primary transition-colors"
-          >
-            About Us
-          </a>
-          <a
-            href="/messages"
-            className="block text-lg font-medium hover:text-primary transition-colors"
-          >
-            Messages
-          </a>
+          )}
+
+          {MobileNavLinks.map((item, index) => (
+            <div key={index} className="space-y-3">
+              {item.href ? (
+                <a
+                  href={item.href}
+                  className="flex items-center space-x-3 text-lg font-medium hover:text-primary transition-colors"
+                  onClick={() => setShowMobileMenu(false)}
+                >
+                  <span className="text-xl">{item.icon}</span>
+                  <span>{item.title}</span>
+                </a>
+              ) : (
+                <>
+                  <div className="flex items-center space-x-3 text-lg font-medium">
+                    <span className="text-xl">{item.icon}</span>
+                    <span>{item.title}</span>
+                  </div>
+                  <div className="space-y-3 pl-9">
+                    {item.items?.map((subItem, subIndex) => (
+                      <a
+                        key={subIndex}
+                        href={subItem.href}
+                        className="block text-base text-muted-foreground hover:text-primary transition-colors"
+                        onClick={() => setShowMobileMenu(false)}
+                      >
+                        {subItem.title}
+                      </a>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          ))}
+
           {!isAuthenticated ? (
             <div className="space-y-4 pt-6">
               <Button
-                variant="ghost"
-                className="w-full justify-start rounded-full"
-                onClick={() => onSignIn?.()}
+                variant="outline"
+                className="w-full justify-center rounded-full"
+                onClick={() => {
+                  onSignIn?.();
+                  setShowMobileMenu(false);
+                }}
               >
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign In
               </Button>
               <Button
-                className="w-full justify-start rounded-full"
-                onClick={() => onSignUp?.()}
+                className="w-full justify-center rounded-full bg-gradient-to-r from-emerald-400 to-cyan-400 text-white hover:from-emerald-500 hover:to-cyan-500"
+                onClick={() => {
+                  onSignUp?.();
+                  setShowMobileMenu(false);
+                }}
               >
                 <UserPlus className="mr-2 h-4 w-4" />
                 Sign Up
               </Button>
             </div>
-          ) : null}
+          ) : (
+            <div className="pt-6">
+              <Button
+                variant="outline"
+                className="w-full justify-center rounded-full text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={() => {
+                  handleSignOut();
+                  setShowMobileMenu(false);
+                }}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Log Out
+              </Button>
+            </div>
+          )}
         </nav>
       </MobileNav>
     </>

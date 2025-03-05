@@ -6,20 +6,18 @@ import { Card, CardContent } from "./ui/card";
 import {
   Building2,
   Star,
-  Plus,
   TrendingUp,
   PoundSterling,
   Users,
-  Crown,
   Bitcoin,
 } from "lucide-react";
 import { getSavedProperties } from "../lib/properties";
-import { AddPropertyModal } from "./AddPropertyModal";
 import PropertyCard from "./PropertyCard";
 import { supabase } from "../lib/supabase";
 import { Layout } from "./Layout";
 import { BitcoinPrice } from "./BitcoinPrice";
 import { updateUserProfile, getAllUsers } from '../lib/users';
+import { PropertyImporter } from './PropertyImporter';
 
 export default function Dashboard() {
   const { user, profile } = useAuth();
@@ -27,8 +25,6 @@ export default function Dashboard() {
   const [savedProperties, setSavedProperties] = React.useState<any[]>([]);
   const [addedProperties, setAddedProperties] = React.useState<any[]>([]);
   const [users, setUsers] = React.useState<any[]>([]);
-  const [isAddPropertyModalOpen, setIsAddPropertyModalOpen] =
-    React.useState(false);
   const [portfolioStats, setPortfolioStats] = React.useState({
     totalProperties: 0,
     totalValue: 0,
@@ -140,9 +136,7 @@ export default function Dashboard() {
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold">Dashboard</h1>
-            <Button onClick={() => setIsAddPropertyModalOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" /> Add Property
-            </Button>
+            <PropertyImporter />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -286,12 +280,6 @@ export default function Dashboard() {
           </div>
         </div>
       </main>
-
-      <AddPropertyModal
-        isOpen={isAddPropertyModalOpen}
-        onClose={() => setIsAddPropertyModalOpen(false)}
-        onSuccess={loadProperties}
-      />
     </Layout>
   );
 }

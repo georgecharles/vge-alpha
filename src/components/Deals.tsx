@@ -7,25 +7,27 @@ import { Footer } from "./Footer";
 import HeroSection from "./HeroSection";
 import { LoadingSpinner } from "./ui/loading-spinner";
 import { DealModal } from "./DealModal";
+import { Alert } from "./ui/alert";
 
 export const Deals = () => {
   const { profile } = useAuth();
   const [deals, setDeals] = React.useState<Deal[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
   const [isSearching, setIsSearching] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [hasMore, setHasMore] = React.useState(true);
   const [isFetchingMore, setIsFetchingMore] = React.useState(false);
+  const [selectedDeal, setSelectedDeal] = React.useState<Deal | null>(null);
+  const [isDealModalOpen, setIsDealModalOpen] = React.useState(false);
   const observerTarget = React.useRef<HTMLDivElement>(null);
   const loadingRef = React.useRef(false);
   const DEALS_PER_PAGE = 6;
-  const [selectedDeal, setSelectedDeal] = React.useState<Deal | null>(null);
-  const [isDealModalOpen, setIsDealModalOpen] = React.useState(false);
-  const [isInitialLoad, setIsInitialLoad] = React.useState(true);
 
   const loadDeals = async (pageNum = 1, isLoadingMore = false) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
+    setError(null);
 
     try {
       if (!isLoadingMore) {
@@ -34,7 +36,9 @@ export const Deals = () => {
         setIsFetchingMore(true);
       }
       
+      console.log('Fetching deals page:', pageNum);
       const fetchedDeals = await getDeals(pageNum, DEALS_PER_PAGE);
+      console.log('Received deals:', fetchedDeals);
       
       if (pageNum === 1) {
         setDeals(fetchedDeals);
@@ -44,9 +48,14 @@ export const Deals = () => {
       
       setHasMore(fetchedDeals.length === DEALS_PER_PAGE);
       setPage(pageNum);
-      setIsInitialLoad(false);
     } catch (error) {
       console.error("Error loading deals:", error);
+      setError(
+        error instanceof Error 
+          ? `Failed to load deals: ${error.message}` 
+          : "Failed to load deals. Please try again later."
+      );
+      setDeals([]); // Clear deals on error
     } finally {
       setIsLoading(false);
       setIsFetchingMore(false);
@@ -54,16 +63,22 @@ export const Deals = () => {
     }
   };
 
-  // Initial load
+  // Initial load with error boundary
   React.useEffect(() => {
-    if (isInitialLoad) {
-      loadDeals(1, false);
-    }
-  }, [isInitialLoad]);
+    console.log('Initial load effect running');
+    loadDeals(1, false).catch(error => {
+      console.error('Effect error:', error);
+      setError(
+        error instanceof Error 
+          ? `Failed to load deals: ${error.message}` 
+          : "Failed to load deals. Please try again later."
+      );
+    });
+  }, []);
 
   // Intersection Observer for infinite scroll
   React.useEffect(() => {
-    if (!observerTarget.current || isInitialLoad || isSearching) return;
+    if (!observerTarget.current || isSearching) return;
 
     const observer = new IntersectionObserver(
       entries => {
@@ -79,38 +94,32 @@ export const Deals = () => {
 
     observer.observe(observerTarget.current);
     return () => observer.disconnect();
-  }, [hasMore, page, isInitialLoad, isSearching]);
+  }, [hasMore, page, isSearching]);
 
   const handleSearch = async (term: string) => {
     if (!term.trim()) {
-      // Reset all states when clearing search
       setDeals([]);
       setIsSearching(false);
       setPage(1);
       setHasMore(true);
-      loadDeals(1, false); // Use the existing loadDeals function
+      loadDeals(1, false);
       return;
     }
 
     setIsSearching(true);
-    setIsLoading(true); // Show loading state during search
-    setDeals([]); // Clear existing results before search
+    setIsLoading(true);
+    setDeals([]);
 
     try {
       console.log('Searching for term:', term);
       const results = await searchDeals(term);
       console.log('Search results:', results);
-
-      if (results.length === 0) {
-        console.log('No results found');
-      }
-
       setDeals(results);
-      setHasMore(false); // Disable infinite scroll for search results
-      setPage(1); // Reset page number
+      setHasMore(false);
+      setPage(1);
     } catch (error) {
       console.error("Error searching deals:", error);
-      setDeals([]); // Clear results on error
+      setDeals([]);
     } finally {
       setIsSearching(false);
       setIsLoading(false);
@@ -133,6 +142,18 @@ export const Deals = () => {
               {isSearching ? "Search Results" : "Available Deals"}
             </h2>
             
+            {error && (
+              <Alert variant="destructive" className="mb-6">
+                <p>{error}</p>
+                <button 
+                  onClick={() => loadDeals(1, false)}
+                  className="mt-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary/90"
+                >
+                  Try Again
+                </button>
+              </Alert>
+            )}
+            
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
               {isLoading ? (
                 Array(3).fill(0).map((_, i) => (
@@ -146,6 +167,7 @@ export const Deals = () => {
                   <div 
                     key={deal.id}
                     onClick={() => {
+                      console.log('Deal clicked:', deal);
                       setSelectedDeal(deal);
                       setIsDealModalOpen(true);
                     }}
@@ -159,7 +181,14 @@ export const Deals = () => {
                 ))
               ) : (
                 <div className="col-span-3 text-center py-8 text-muted-foreground">
-                  No deals found
+                  {error ? (
+                    <div>
+                      <p>Error loading deals</p>
+                      <p className="text-sm text-muted-foreground mt-2">{error}</p>
+                    </div>
+                  ) : (
+                    'No deals found'
+                  )}
                 </div>
               )}
             </div>

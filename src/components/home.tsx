@@ -9,7 +9,7 @@ import { MessagesModal } from "./MessagesModal";
 import { Footer } from "./Footer";
 import { LegalDisclaimer } from "./LegalDisclaimer";
 import { useAuth } from "../lib/auth";
-import { searchProperties, getFeaturedProperties, Property } from "../lib/properties";
+import { searchProperties, getFeaturedProperties, Property, useDeals } from "../lib/properties";
 import { Marquee } from "./ui/Marquee";
 import { cn } from "../lib/utils";
 import { LiquidChrome } from "./LiquidChrome";
@@ -97,6 +97,7 @@ const Home = () => {
   const [isPropertyModalOpen, setIsPropertyModalOpen] = React.useState(false);
   const observerTarget = React.useRef<HTMLDivElement>(null);
   const loadingRef = React.useRef(false);
+  const { data: dealsData, isLoading: isLoadingDeals } = useDeals();
 
   const loadFeaturedProperties = async (pageNum = 1, isLoadingMore = false) => {
     if (loadingRef.current) return;
@@ -260,7 +261,7 @@ const Home = () => {
               ) : showProperties ? (
                 searchResults.map((property) => (
                   <div 
-                    key={property.id} 
+                    key={property.id || Math.random().toString()} 
                     onClick={() => {
                       setSelectedProperty(property);
                       setIsPropertyModalOpen(true);
@@ -269,15 +270,15 @@ const Home = () => {
                   >
                     <PropertyCard
                       id={property.id}
-                      address={property.location}
-                      price={property.price}
-                      squareFootage={property.sqft}
-                      bedrooms={property.beds}
-                      bathrooms={property.baths}
-                      isPremium={property.is_featured}
+                      address={property.location || 'Location not available'}
+                      price={Number(property.price) || 0}
+                      squareFootage={Number(property.sqft) || 0}
+                      bedrooms={Number(property.beds) || 0}
+                      bathrooms={Number(property.baths) || 0}
+                      isPremium={Boolean(property.is_featured)}
                       propertyType="residential"
-                      description={property.description}
-                      createdAt={property.created_at}
+                      description={property.description || ''}
+                      createdAt={property.created_at || new Date().toISOString()}
                       images={property.image_url ? [property.image_url] : []}
                     />
                   </div>
@@ -309,7 +310,37 @@ const Home = () => {
 
         <MarketTrends />
 
-            {/* Trusted by Industry Leaders Section */}
+        {/* Investment Deals Section */}
+        <div className="w-full bg-background py-8">
+          <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
+            <h2 className="text-2xl font-bold mb-6">Investment Deals</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {isLoadingDeals ? (
+                Array(3).fill(0).map((_, i) => (
+                  <div key={i} className="w-full h-[420px] bg-muted rounded-lg animate-pulse" />
+                ))
+              ) : dealsData?.pages[0].map((deal) => (
+                <PropertyCard
+                  key={deal.id}
+                  id={deal.id}
+                  address={deal.location}
+                  price={deal.price}
+                  description={deal.description}
+                  propertyType={deal.property_type}
+                  createdAt={deal.created_at}
+                  images={[deal.image_url]}
+                  isDeal={true}
+                  roi_percentage={deal.roi_percentage}
+                  investment_term={deal.investment_term}
+                  deal_type={deal.deal_type}
+                  isPremium={true}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Trusted by Industry Leaders Section */}
         <section className="w-full py-12 bg-background">
           <div className="container mx-auto text-center mb-8">
             <h2 className="text-3xl font-bold mb-4">Trusted by Industry Leaders</h2>

@@ -35,6 +35,9 @@ interface PropertyCardProps {
   status?: string;
   potential_profit?: number;
   roi_percentage?: number;
+  investment_term?: string;
+  deal_type?: string;
+  isDeal?: boolean;
   images?: string[];
   onMessageAuthor?: (authorId: string) => void;
   onClick?: () => void;
@@ -44,21 +47,25 @@ interface PropertyCardProps {
 }
 
 const PropertyCard = ({
-  address = "123 Example Street, City, State 12345",
-  price = 500000,
+  id = '',
+  address = 'Location not available',
+  price = 0,
   squareFootage = 0,
   bedrooms = 0,
   bathrooms = 0,
-  isPremium = true,
+  isPremium = false,
   author,
   type = "property",
   potential_profit,
   roi_percentage,
+  investment_term,
+  deal_type,
+  isDeal = false,
   images = [],
   onMessageAuthor,
   onClick,
-  description,
-  propertyType,
+  description = '',
+  propertyType = 'residential',
   createdAt,
 }: PropertyCardProps) => {
   const { profile } = useAuth();
@@ -141,21 +148,29 @@ const PropertyCard = ({
           </div>
         </div>
 
-        {type === "deal" && (
+        {isDeal && (
           <div className="space-y-2 mb-4">
-            {potential_profit && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Potential Profit:</span>
-                <span className="font-medium text-emerald-500">
-                  £{potential_profit.toLocaleString()}
-                </span>
-              </div>
-            )}
             {roi_percentage && (
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">ROI:</span>
                 <span className="font-medium text-emerald-500">
                   {roi_percentage}%
+                </span>
+              </div>
+            )}
+            {investment_term && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Investment Term:</span>
+                <span className="font-medium">
+                  {investment_term}
+                </span>
+              </div>
+            )}
+            {deal_type && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Deal Type:</span>
+                <span className="font-medium">
+                  {deal_type}
                 </span>
               </div>
             )}

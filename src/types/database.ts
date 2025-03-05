@@ -88,3 +88,18 @@ export type SavedProperty =
   Database["public"]["Tables"]["saved_properties"]["Row"];
 export type MarketInsight =
   Database["public"]["Tables"]["market_insights"]["Row"];
+
+export interface Deal {
+  id: string;
+  title: string;
+  description: string;
+  location: string;
+  price: number;
+  roi_percentage: number;
+  investment_term: string;
+  property_type: string;
+  deal_type: string;
+  image_url: string;
+  created_at: string;
+  updated_at: string;
+}

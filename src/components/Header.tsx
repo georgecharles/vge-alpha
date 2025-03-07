@@ -51,57 +51,78 @@ const MobileNavLinks = [
   {
     title: "Investment Deals",
     href: "/deals",
-    icon: "💼"
+    icon: "💼",
+    requiresAuth: true
+  },
+  {
+    title: "Listings",
+    href: "/listings",
+    icon: "🏠",
+    requiresAuth: false
   },
   {
     title: "Market",
     items: [
-      { title: "Market Trends", href: "/trends", description: "Stay updated with the latest real estate market trends" },
-      { title: "Market Insights", href: "/insights", description: "Deep dive into property market analytics" },
-      { title: "Research & Reports", href: "/research", description: "Access expert analysis and reports" }
+      { title: "Market Trends", href: "/trends", description: "Stay updated with the latest real estate market trends", requiresAuth: true },
+      { title: "Market Insights", href: "/insights", description: "Deep dive into property market analytics", requiresAuth: true },
+      { title: "Research & Reports", href: "/research", description: "Access expert analysis and reports", requiresAuth: false }
     ],
     icon: "📊"
   },
   {
     title: "Services",
     items: [
-      { title: "Property Management", href: "/property-management", description: "Let us take care of your property" },
-      { title: "Investment Opportunities", href: "/investment-opportunities", description: "Discover tailored investment strategies" },
-      { title: "Calculators", href: "/calculators", description: "Calculate your property investment" }
+      { title: "Property Management", href: "/property-management", description: "Let us take care of your property", requiresAuth: true },
+      { title: "Investment Opportunities", href: "/investment-opportunities", description: "Discover tailored investment strategies", requiresAuth: true },
+      { title: "Calculators", href: "/calculators", description: "Calculate your property investment", requiresAuth: false }
     ],
     icon: "🏠"
   },
   {
     title: "Messages",
     href: "/messages",
-    icon: "💬"
+    icon: "💬",
+    requiresAuth: true
   },
   {
     title: "Pricing",
     href: "/pricing",
-    icon: "💎"
+    icon: "💎",
+    requiresAuth: false
   },
   {
     title: "Help & Support",
     href: "/help",
-    icon: "❓"
+    icon: "❓",
+    requiresAuth: false
   },
   {
     title: "About Us",
     href: "/about-us",
-    icon: "ℹ️"
+    icon: "ℹ️",
+    requiresAuth: false
   }
 ];
 
-const Header = ({
+export default function Header({
   isAuthenticated = false,
   onSignIn,
   onSignUp,
   userProfile = {},
-}: HeaderProps) => {
+}: HeaderProps) {
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
+  const [isScrolled, setIsScrolled] = React.useState(false);
   const navigate = useNavigate();
   const { signOut, isLoading } = useAuth();
+
+  // Add scroll listener
+  React.useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleSignOut = async () => {
     console.log("Sign out button clicked");
@@ -147,11 +168,22 @@ const Header = ({
 
   return (
     <>
-      <header className="fixed top-0 left-0 right-0 z-50 w-screen overflow-x-hidden">
-        <div className="px-2 sm:px-4 py-3 max-w-screen-2xl mx-auto">
-          <div className="mx-2 sm:mx-auto max-w-[1400px] w-[calc(100vw-24px)] sm:w-auto rounded-full bg-white/90 shadow-sm border border-gray-200/50 backdrop-blur-md transition-all duration-300">
-            <div className="h-14 px-3 sm:px-4 md:px-6 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+      <header 
+        className={cn(
+          "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
+          isScrolled ? "py-2" : "py-4"
+        )}
+      >
+        <div className="px-4 mx-auto max-w-7xl">
+          <div className={cn(
+            "rounded-full bg-white border transition-all duration-300",
+            isScrolled 
+              ? "shadow-md border-gray-200/50 backdrop-blur-md bg-white/90" 
+              : "shadow-sm border-transparent"
+          )}>
+            <div className="h-16 px-6 flex items-center justify-between">
+              {/* Logo */}
+              <div className="flex items-center gap-8">
                 <a href="/" className="hover:opacity-80 transition-opacity">
                   <img
                     src="https://i.postimg.cc/GpdY6N74/my-1920-x-1080-px-1.png"
@@ -159,84 +191,127 @@ const Header = ({
                     className="h-8"
                   />
                 </a>
+
+                {/* Desktop Navigation */}
+                <NavigationMenu className="hidden lg:flex">
+                  <NavigationMenuList className="gap-2">
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger 
+                        className={cn(
+                          "text-sm font-medium rounded-full px-4",
+                          "bg-transparent hover:bg-gray-100 transition-colors",
+                          "data-[state=open]:bg-gray-100"
+                        )}
+                      >
+                        Market
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="w-[400px] gap-3 p-4 rounded-2xl">
+                          {isAuthenticated ? (
+                            <>
+                              <ListItem href="/trends" title="Market Trends">
+                                Stay updated with the latest real estate market trends.
+                              </ListItem>
+                              <ListItem href="/insights" title="Market Insights">
+                                Deep dive into property market analytics and forecasts.
+                              </ListItem>
+                            </>
+                          ) : (
+                            <>
+                              <ListItem 
+                                href="#" 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  onSignIn?.();
+                                }} 
+                                title="Market Trends"
+                              >
+                                Sign in to access market trends.
+                              </ListItem>
+                              <ListItem 
+                                href="#" 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  onSignIn?.();
+                                }} 
+                                title="Market Insights"
+                              >
+                                Sign in to access market insights.
+                              </ListItem>
+                            </>
+                          )}
+                          <ListItem href="/research" title="Research & Reports">
+                            Access expert analysis and reports.
+                          </ListItem>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+
+                    <NavigationMenuItem>
+                      <NavigationMenuLink
+                        className={cn(
+                          "text-sm font-medium rounded-full px-4 py-2",
+                          "hover:bg-gray-100 transition-colors"
+                        )}
+                        href="/deals"
+                      >
+                        Deals
+                      </NavigationMenuLink>
+                    </NavigationMenuItem>
+
+                    <NavigationMenuItem>
+                      <NavigationMenuLink
+                        className={cn(
+                          "text-sm font-medium rounded-full px-4 py-2",
+                          "hover:bg-gray-100 transition-colors"
+                        )}
+                        href="/listings"
+                      >
+                        Listings
+                      </NavigationMenuLink>
+                    </NavigationMenuItem>
+
+                    <NavigationMenuItem>
+                      <NavigationMenuTrigger 
+                        className={cn(
+                          "text-sm font-medium rounded-full px-4",
+                          "bg-transparent hover:bg-gray-100 transition-colors",
+                          "data-[state=open]:bg-gray-100"
+                        )}
+                      >
+                        Services
+                      </NavigationMenuTrigger>
+                      <NavigationMenuContent>
+                        <ul className="w-[400px] gap-3 p-4 rounded-2xl">
+                          <ListItem href="/property-management" title="Property Management">
+                            Let us take care of your property.
+                          </ListItem>
+                          <ListItem href="/investment-opportunities" title="Investment Opportunities">
+                            Discover tailored investment strategies.
+                          </ListItem>
+                          <ListItem href="/calculators" title="Calculators">
+                            Calculate different aspects of your property investment.
+                          </ListItem>
+                        </ul>
+                      </NavigationMenuContent>
+                    </NavigationMenuItem>
+
+                    <NavigationMenuItem>
+                      <NavigationMenuLink
+                        className={cn(
+                          "text-sm font-medium rounded-full px-4 py-2",
+                          "hover:bg-gray-100 transition-colors"
+                        )}
+                        href="/pricing"
+                      >
+                        Pricing
+                      </NavigationMenuLink>
+                    </NavigationMenuItem>
+                  </NavigationMenuList>
+                </NavigationMenu>
               </div>
 
-              <NavigationMenu className="hidden lg:flex">
-                <NavigationMenuList>
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="text-sm font-medium transition-colors hover:text-primary bg-transparent hover:bg-transparent">
-                      Market
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="grid w-[400px] gap-3 p-4 rounded-xl">
-                        <ListItem href="/trends" title="Market Trends">
-                          Stay updated with the latest real estate market trends.
-                        </ListItem>
-                        <ListItem href="/insights" title="Market Insights">
-                          Deep dive into property market analytics and forecasts.
-                        </ListItem>
-                        <ListItem href="/research" title="Research & Reports">
-                          Access expert analysis and reports.
-                        </ListItem>
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-
-                  <NavigationMenuItem>
-                    <NavigationMenuLink
-                      className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
-                      href="/deals"
-                    >
-                      Deals
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-
-                  <NavigationMenuItem>
-                    <NavigationMenuTrigger className="text-sm font-medium transition-colors hover:text-primary bg-transparent hover:bg-transparent">
-                      Services
-                    </NavigationMenuTrigger>
-                    <NavigationMenuContent>
-                      <ul className="grid w-[400px] gap-3 p-4 rounded-xl">
-                        <ListItem href="/property-management" title="Property Management">
-                          Let us take care of your property.
-                        </ListItem>
-                        <ListItem href="/investment-opportunities" title="Investment Opportunities">
-                          Discover tailored investment strategies.
-                        </ListItem>
-                        <ListItem href="/calculators" title="Calculators">
-                          Calculate different aspects of your property investment.
-                        </ListItem>
-                      </ul>
-                    </NavigationMenuContent>
-                  </NavigationMenuItem>
-
-                  <NavigationMenuItem>
-                    <NavigationMenuLink
-                      className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
-                      href="/pricing"
-                    >
-                      Pricing
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <NavigationMenuLink
-                      className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
-                      href="/help"
-                    >
-                      Help & Support
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                  <NavigationMenuItem>
-                    <NavigationMenuLink
-                      className="text-sm font-medium transition-colors hover:text-primary px-4 py-2"
-                      href="/about-us"
-                    >
-                      About Us
-                    </NavigationMenuLink>
-                  </NavigationMenuItem>
-                </NavigationMenuList>
-              </NavigationMenu>
-
+              {/* Right Side Actions */}
               <div className="flex items-center gap-4">
                 <Button
                   variant="ghost"
@@ -245,21 +320,54 @@ const Header = ({
                 >
                   <Menu className="h-6 w-6" />
                 </Button>
+
+                {/* Help & Support + About Us */}
+                <nav className="hidden lg:flex items-center gap-2 mr-4">
+                  <a 
+                    href="/help"
+                    className={cn(
+                      "text-sm font-medium rounded-full px-4 py-2",
+                      "hover:bg-gray-100 transition-colors"
+                    )}
+                  >
+                    Help & Support
+                  </a>
+                  <a 
+                    href="/about-us"
+                    className={cn(
+                      "text-sm font-medium rounded-full px-4 py-2",
+                      "hover:bg-gray-100 transition-colors"
+                    )}
+                  >
+                    About Us
+                  </a>
+                </nav>
+
+                {/* Upgrade Button */}
                 <Button
                   variant="ghost"
                   className="hidden md:flex bg-gradient-to-r from-emerald-400 to-cyan-400 text-white hover:from-emerald-500 hover:to-cyan-500 rounded-full border border-emerald-500/20 shadow-lg hover:shadow-emerald-500/20 transition-all duration-300"
-                  onClick={() => (window.location.href = "/pricing")}
+                  onClick={() => navigate("/pricing")}
                 >
                   <Crown className="mr-2 h-4 w-4" />
                   Upgrade
                 </Button>
+
+                {/* Auth Buttons or User Menu */}
                 {!isAuthenticated ? (
-                  <div className="hidden md:flex items-center gap-4">
-                    <Button variant="ghost" onClick={() => onSignIn?.()} className="rounded-full">
+                  <div className="hidden md:flex items-center gap-2">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => onSignIn?.()} 
+                      className="rounded-full hover:bg-gray-100"
+                    >
                       <LogIn className="mr-2 h-4 w-4" />
                       Sign In
                     </Button>
-                    <Button onClick={() => onSignUp?.()} variant="default" className="rounded-full">
+                    <Button 
+                      onClick={() => onSignUp?.()} 
+                      className="rounded-full bg-black text-white hover:bg-gray-800"
+                    >
                       <UserPlus className="mr-2 h-4 w-4" />
                       Sign Up
                     </Button>
@@ -289,11 +397,11 @@ const Header = ({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent 
-                      className="w-56 mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg z-50" 
+                      className="w-56 mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg" 
                       align="end" 
                       forceMount
                     >
-                      <DropdownMenuItem className="flex-col items-start bg-white">
+                      <DropdownMenuItem className="flex-col items-start">
                         <div className="font-medium">
                           {userProfile?.full_name}
                         </div>
@@ -302,26 +410,23 @@ const Header = ({
                         </div>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="bg-white hover:bg-muted"
-                        onClick={() =>
-                          window.location.pathname !== "/dashboard" &&
-                          navigate("/dashboard")
-                        }
-                      >
+                      <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         <span>Dashboard</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="bg-white hover:bg-muted" onClick={() => navigate("/account")}>
+                      <DropdownMenuItem onClick={() => navigate("/account")}>
                         <Settings className="mr-2 h-4 w-4" />
                         <span>Account Settings</span>
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="bg-white hover:bg-muted" onClick={() => navigate("/messages")}>
+                      <DropdownMenuItem onClick={() => navigate("/messages")}>
                         <MessageCircle className="mr-2 h-4 w-4" />
                         <span>Messages</span>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="bg-white hover:bg-muted" onClick={handleSignOut}>
+                      <DropdownMenuItem 
+                        className="text-red-500 focus:text-red-500" 
+                        onClick={handleSignOut}
+                      >
                         <LogOut className="mr-2 h-4 w-4" />
                         <span>Log Out</span>
                       </DropdownMenuItem>
@@ -334,6 +439,7 @@ const Header = ({
         </div>
       </header>
 
+      {/* Mobile Navigation */}
       <MobileNav
         isOpen={showMobileMenu}
         onClose={() => setShowMobileMenu(false)}
@@ -398,9 +504,15 @@ const Header = ({
             <div key={index} className="space-y-3">
               {item.href ? (
                 <a
-                  href={item.href}
+                  href={(!item.requiresAuth || isAuthenticated) ? item.href : "#"}
                   className="flex items-center space-x-3 text-lg font-medium hover:text-primary transition-colors"
-                  onClick={() => setShowMobileMenu(false)}
+                  onClick={(e) => {
+                    if (item.requiresAuth && !isAuthenticated) {
+                      e.preventDefault();
+                      onSignIn?.();
+                    }
+                    setShowMobileMenu(false);
+                  }}
                 >
                   <span className="text-xl">{item.icon}</span>
                   <span>{item.title}</span>
@@ -417,9 +529,18 @@ const Header = ({
                         key={subIndex}
                         href={subItem.href}
                         className="block text-base text-muted-foreground hover:text-primary transition-colors"
-                        onClick={() => setShowMobileMenu(false)}
+                        onClick={(e) => {
+                          if (subItem.requiresAuth && !isAuthenticated) {
+                            e.preventDefault();
+                            onSignIn?.();
+                          }
+                          setShowMobileMenu(false);
+                        }}
                       >
                         {subItem.title}
+                        {subItem.requiresAuth && !isAuthenticated && (
+                          <span className="ml-2 text-xs text-muted-foreground">(Sign in required)</span>
+                        )}
                       </a>
                     ))}
                   </div>
@@ -471,6 +592,4 @@ const Header = ({
       </MobileNav>
     </>
   );
-};
-
-export default Header;
+}

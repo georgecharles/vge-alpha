@@ -1,4 +1,3 @@
-import React from "react";
 import { RandomFact } from "./RandomFact";
 
 export function Footer() {
@@ -9,7 +8,7 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">About Us</h3>
             <p className="text-gray-400">
-              Your trusted source for property search and market analysis. MyVGE is part of Very Good Marketing Co.
+              Your trusted source for property search and market analysis.
             </p>
           </div>
           <div>
@@ -40,7 +39,7 @@ export function Footer() {
           <div>
             <h3 className="text-lg font-semibold mb-4">Contact</h3>
             <ul className="space-y-2 text-gray-400">
-              <li>@myvge.com</li>
+              <li>info@myvge.com</li>
               <li>Lytchett House, 13 Freeland Park, Poole, Dorset, England, BH16 6FA</li>
             </ul>
           </div>
@@ -55,8 +54,7 @@ export function Footer() {
           <RandomFact />
           <div className="text-center text-gray-400 space-y-2">
             <p className="text-xs">
-              MyVGE is a trading name of Very Good Marketing Co, registered in England and
-              Wales. Registered office: Lytchett House, 13 Freeland Park, Poole, Dorset, England, BH16 6FA. Company No: 15271126
+              MyVGE is registered in England and Wales. Registered office: Lytchett House, 13 Freeland Park, Poole, Dorset, England, BH16 6FA. Company No: 15271126
             </p>
             <p className="text-xs">
               The information on this website is for general information

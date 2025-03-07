@@ -8,6 +8,7 @@ import {
   useRoutes,
   Routes,
   Route,
+  BrowserRouter,
 } from "react-router-dom";
 import { ProgressBar } from "./components/ui/progress-bar";
 import { AuthProvider } from "./lib/auth";
@@ -35,6 +36,7 @@ import InvestmentOpportunitiesPage from "./components/InvestmentOpportunitiesPag
 import AboutUsPage from "./components/AboutUsPage";
 import DealsPage from "./components/DealsPage";
 import Messages from "./components/Messages";
+import Listings from './pages/Listings';
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -117,6 +119,7 @@ function AppContent() {
                 </RequireAuth>
               }
             />
+            <Route path="/listings" element={<Listings />} />
             {import.meta.env.VITE_TEMPO === "true" && (
               <Route path="/tempobook/*" />
             )}

@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useToast } from '@/components/ui/use-toast';
-import { Bed, Home, MapPin, Search, Calendar, PoundSterling, TrendingUp } from 'lucide-react';
+import { Bed, Home, MapPin, Search, Calendar, PoundSterling, TrendingUp, X, ExternalLink, Maximize, AreaChart, ArrowUpRight, ArrowDownRight, Info, SquareIcon, Building, Key } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import {
   Select,
@@ -54,6 +54,8 @@ interface Filters {
 interface AreaInsights {
   askingPrices?: AskingPricesResponse;
   priceHistory?: PriceHistoryResponse;
+  planningApplications?: any;
+  neighborhoodData?: any;
 }
 
 export default function Listings() {
@@ -79,6 +81,13 @@ export default function Listings() {
     sortBy: 'most_recent_sale_date'
   });
 
+  const [showPricePerSqft, setShowPricePerSqft] = React.useState(true);
+  const [showStampDuty, setShowStampDuty] = React.useState(true);
+  const [showPlanningApplications, setShowPlanningApplications] = React.useState(false);
+
+  const [selectedProperty, setSelectedProperty] = React.useState<ListedProperty | SoldProperty | null>(null);
+  const [isModalOpen, setIsModalOpen] = React.useState(false);
+
   const displayProperties = React.useMemo(() => {
     return viewMode === 'listed' ? listedProperties : soldProperties;
   }, [viewMode, listedProperties, soldProperties]);
@@ -96,12 +105,19 @@ export default function Listings() {
           postcode,
           property_type: filters.propertyType === 'any' ? undefined : filters.propertyType,
           max_age_months: filters.maxAgeMonths
-        })
+        }),
+        // Add more API calls here when we have the corresponding functions in patmaService.ts
+        // For example:
+        // getPlanningApplications({ postcode, radius: filters.radius }),
+        // getNeighborhoodData({ postcode })
       ]);
 
       setAreaInsights({
         askingPrices,
-        priceHistory
+        priceHistory,
+        // When we implement the additional API calls:
+        // planningApplications,
+        // neighborhoodData
       });
     } catch (error) {
       console.error('Error fetching area insights:', error);
@@ -477,18 +493,30 @@ export default function Listings() {
   const addInvestmentMetrics = <T extends ListedProperty | SoldProperty>(property: T): T => {
     const propertyWithMetrics = { ...property };
     
-    // Only calculate if not already provided
-    if (!propertyWithMetrics.estimated_rent) {
-      // Determine the actual price from various possible fields
-      const price = 
-        propertyWithMetrics.price || 
-        propertyWithMetrics.asking_price || 
-        propertyWithMetrics.sale_price || 
-        (propertyWithMetrics as any).price_paid ||
-        (propertyWithMetrics as any).latest_price ||
-        0;
+    // Determine the actual price from various possible fields
+    const price = 
+      propertyWithMetrics.price || 
+      propertyWithMetrics.asking_price || 
+      propertyWithMetrics.sale_price || 
+      (propertyWithMetrics as any).price_paid ||
+      (propertyWithMetrics as any).latest_price ||
+      0;
+    
+    if (price > 0) {
+      // Calculate stamp duty (assuming standard purchase)
+      if (!propertyWithMetrics.stamp_duty) {
+        propertyWithMetrics.stamp_duty = calculateStampDuty(price);
+      }
       
-      if (price > 0) {
+      // Calculate price per square foot if size data is available
+      if (propertyWithMetrics.size_sq_meters && !propertyWithMetrics.price_per_sqft) {
+        propertyWithMetrics.price_per_sqft = calculatePricePerSqft(price, propertyWithMetrics.size_sq_meters, true);
+      } else if (propertyWithMetrics.size_sq_feet && !propertyWithMetrics.price_per_sqft) {
+        propertyWithMetrics.price_per_sqft = calculatePricePerSqft(price, propertyWithMetrics.size_sq_feet, false);
+      }
+      
+      // Only calculate rent estimates if not already provided
+      if (!propertyWithMetrics.estimated_rent) {
         // Basic rent calculation (very simplified)
         // In reality, this would be based on location, property type, size, etc.
         let monthlyRentEstimate = 0;
@@ -559,6 +587,60 @@ export default function Listings() {
     return '/images/property-types/house.jpg';
   };
 
+  // Add a function to calculate stamp duty
+  const calculateStampDuty = (price: number, isBuyToLet: boolean = false, isFirstTimeBuyer: boolean = false) => {
+    // UK Stamp Duty rates as of 2023
+    if (price <= 0) return 0;
+    
+    let stampDuty = 0;
+    
+    if (isFirstTimeBuyer) {
+      // First-time buyer rates
+      if (price <= 425000) {
+        stampDuty = 0;
+      } else if (price <= 625000) {
+        stampDuty = (price - 425000) * 0.05;
+      } else {
+        // First-time buyers purchasing property over £625,000 don't get relief
+        isFirstTimeBuyer = false;
+      }
+    }
+    
+    if (!isFirstTimeBuyer) {
+      // Standard rates
+      if (price <= 250000) {
+        stampDuty = 0;
+      } else if (price <= 925000) {
+        stampDuty = (price - 250000) * 0.05;
+      } else if (price <= 1500000) {
+        stampDuty = (price - 925000) * 0.1 + (925000 - 250000) * 0.05;
+      } else {
+        stampDuty = (price - 1500000) * 0.12 + (1500000 - 925000) * 0.1 + (925000 - 250000) * 0.05;
+      }
+    }
+    
+    // Additional rate for buy-to-let/second homes
+    if (isBuyToLet) {
+      stampDuty += price * 0.03;
+    }
+    
+    return Math.round(stampDuty);
+  };
+  
+  // Add a utility function to calculate price per square foot/meter
+  const calculatePricePerSqft = (price: number, size: number, isMetric: boolean = false) => {
+    if (!price || !size || size <= 0) return null;
+    
+    if (isMetric) {
+      // Price per square meter
+      return Math.round(price / size);
+    } else {
+      // Price per square foot (convert from square meters if necessary)
+      const sizeInSqft = isMetric ? size * 10.764 : size;
+      return Math.round(price / sizeInSqft);
+    }
+  };
+
   React.useEffect(() => {
     if (searchTerm) {
       handleSearch();
@@ -591,6 +673,594 @@ export default function Listings() {
 
   const handleSortChange = (value: typeof filters.sortBy) => {
     setFilters(prev => ({ ...prev, sortBy: value, page: 1 }));
+  };
+
+  // Function to open the property modal
+  const openPropertyModal = (property: ListedProperty | SoldProperty) => {
+    setSelectedProperty(property);
+    setIsModalOpen(true);
+  };
+
+  // Function to close the property modal
+  const closePropertyModal = () => {
+    setIsModalOpen(false);
+    // Keep the property data for a moment to avoid UI jumps during the closing animation
+    setTimeout(() => setSelectedProperty(null), 300);
+  };
+
+  // Add a property details modal component
+  const PropertyModal = () => {
+    if (!selectedProperty) return null;
+    
+    const price = 
+      selectedProperty.price || 
+      selectedProperty.asking_price || 
+      selectedProperty.sale_price || 
+      (selectedProperty as any).price_paid ||
+      (selectedProperty as any).latest_price || 
+      0;
+      
+    const isSoldProperty = 'date_of_transfer' in selectedProperty;
+    const isListedProperty = !isSoldProperty;
+    
+    // Get the property image URL
+    const imageUrl = selectedProperty.image_url || 
+        (selectedProperty.images && selectedProperty.images.length > 0 ? selectedProperty.images[0] : null) ||
+        (selectedProperty.all_images && selectedProperty.all_images.length > 0 ? selectedProperty.all_images[0] : null);
+            
+    // Generate a fallback URL using Unsplash if needed
+    const propertyId = selectedProperty.uprn || 
+                       (selectedProperty.address ? selectedProperty.address.replace(/\D/g, '') : '') || 
+                       (selectedProperty.postcode ? selectedProperty.postcode.replace(/\s/g, '') : '') || 
+                       0;
+                        
+    const type = (selectedProperty.property_type || 'house').toLowerCase();
+    let category = (selectedProperty as any)._fallback_category || 'house';
+    
+    if (!category) {
+      if (type.includes('flat') || type.includes('apartment')) {
+        category = 'flat';
+      } else if (type.includes('terraced') || type.includes('terrace')) {
+        category = 'terraced';
+      } else if (type.includes('semi')) {
+        category = 'semi';
+      } else if (type.includes('detached')) {
+        category = 'detached';
+      } else if (type.includes('bungalow')) {
+        category = 'bungalow';
+      }
+    }
+    
+    const unsplashFallbackUrl = selectedProperty.uprn 
+      ? `https://source.unsplash.com/collection/1118894/800x600?property=${category}&sig=${selectedProperty.uprn}`
+      : `https://source.unsplash.com/collection/1118894/800x600?property=${category}&sig=${propertyId}`;
+      
+    const displayImageUrl = imageUrl || unsplashFallbackUrl;
+    
+    // Format postcode with fallback
+    const displayPostcode = selectedProperty.postcode || 
+                           (selectedProperty.address && selectedProperty.address.match(/[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}/i)?.[0]) || 
+                           "Not Available";
+    
+    // Extract sale history data for chart
+    const hasSaleHistory = selectedProperty.sold_history && selectedProperty.sold_history.length > 0;
+    const saleHistoryData = hasSaleHistory 
+      ? selectedProperty.sold_history
+          .filter((sale: any) => sale && sale.date && !isNaN(new Date(sale.date).getTime()) && sale.price && !isNaN(parseFloat(String(sale.price))))
+          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      : [];
+    
+    // Calculate price growth percentage if multiple sales
+    const priceGrowth = saleHistoryData.length >= 2 
+      ? ((saleHistoryData[saleHistoryData.length - 1].price - saleHistoryData[0].price) / saleHistoryData[0].price) * 100
+      : null;
+    
+    // Simple mortgage calculation (very basic)
+    const calculateMortgage = (propertyPrice: number, downPaymentPercent: number = 25, interestRate: number = 4.5, termYears: number = 25) => {
+      const downPayment = propertyPrice * (downPaymentPercent / 100);
+      const loanAmount = propertyPrice - downPayment;
+      const monthlyInterest = interestRate / 100 / 12;
+      const totalPayments = termYears * 12;
+      
+      const monthlyPayment = loanAmount * (
+        monthlyInterest * Math.pow(1 + monthlyInterest, totalPayments)
+      ) / (
+        Math.pow(1 + monthlyInterest, totalPayments) - 1
+      );
+      
+      return {
+        downPayment,
+        loanAmount,
+        monthlyPayment,
+        totalPayments,
+        totalRepayment: monthlyPayment * totalPayments
+      };
+    };
+    
+    // Only calculate if we have a valid price
+    const mortgageDetails = price > 0 ? calculateMortgage(price) : null;
+    
+    return (
+      <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-300`}>
+        {/* Modal backdrop */}
+        <div className="absolute inset-0 bg-black/60" onClick={closePropertyModal} />
+        
+        {/* Modal content */}
+        <div className="relative bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+          {/* Close button */}
+          <button 
+            onClick={closePropertyModal}
+            className="absolute top-4 right-4 z-10 bg-white/80 p-1 rounded-full hover:bg-white transition-colors"
+          >
+            <X className="h-6 w-6" />
+          </button>
+          
+          <div className="flex flex-col md:flex-row h-full overflow-hidden">
+            {/* Property image(s) */}
+            <div className="w-full md:w-2/5 h-64 md:h-auto relative">
+              <img 
+                src={displayImageUrl}
+                alt={selectedProperty.address || "Property"}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = unsplashFallbackUrl;
+                }}
+              />
+              {/* Property type badge */}
+              <div className="absolute top-4 left-4">
+                <span className="bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium">
+                  {selectedProperty.property_type}
+                </span>
+              </div>
+              
+              {/* External link if available */}
+              {selectedProperty.listing_url && (
+                <a 
+                  href={selectedProperty.listing_url} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="absolute bottom-4 left-4 bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 hover:bg-white transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View Listing
+                </a>
+              )}
+            </div>
+            
+            {/* Property details */}
+            <div className="w-full md:w-3/5 p-6 overflow-y-auto">
+              <h2 className="text-xl font-bold mb-2">{selectedProperty.address}</h2>
+              <p className="text-3xl font-bold mb-4 text-emerald-600">
+                {formatCurrency(price)}
+              </p>
+              
+              {/* Key property details */}
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-500">Property Type</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Building className="h-4 w-4 text-gray-600" />
+                    <span className="font-medium">{selectedProperty.property_type || 'N/A'}</span>
+                  </div>
+                </div>
+                
+                {selectedProperty.bedrooms && (
+                  <div className="flex flex-col">
+                    <span className="text-sm text-gray-500">Bedrooms</span>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Bed className="h-4 w-4 text-gray-600" />
+                      <span className="font-medium">{selectedProperty.bedrooms}</span>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedProperty.bathrooms && (
+                  <div className="flex flex-col">
+                    <span className="text-sm text-gray-500">Bathrooms</span>
+                    <div className="flex items-center gap-1 mt-1">
+                      <div className="h-4 w-4 text-gray-600 flex items-center justify-center">🛁</div>
+                      <span className="font-medium">{selectedProperty.bathrooms}</span>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-500">Postcode</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <MapPin className="h-4 w-4 text-gray-600" />
+                    <span className="font-medium">{displayPostcode}</span>
+                  </div>
+                </div>
+                
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-500">Tenure</span>
+                  <div className="flex items-center gap-1 mt-1">
+                    <Key className="h-4 w-4 text-gray-600" />
+                    <span className="font-medium">{selectedProperty.tenure || 'N/A'}</span>
+                  </div>
+                </div>
+                
+                {isSoldProperty && (
+                  <div className="flex flex-col">
+                    <span className="text-sm text-gray-500">Sold Date</span>
+                    <div className="flex items-center gap-1 mt-1">
+                      <Calendar className="h-4 w-4 text-gray-600" />
+                      <span className="font-medium">
+                        {new Date((selectedProperty as SoldProperty).date_of_transfer).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {(selectedProperty.size_sq_feet || selectedProperty.size_sq_meters) && (
+                  <div className="flex flex-col">
+                    <span className="text-sm text-gray-500">Size</span>
+                    <div className="flex items-center gap-1 mt-1">
+                      <SquareIcon className="h-4 w-4 text-gray-600" />
+                      <span className="font-medium">
+                        {selectedProperty.size_sq_feet ? `${selectedProperty.size_sq_feet} sq.ft` : ''}
+                        {selectedProperty.size_sq_meters ? `${selectedProperty.size_sq_meters} m²` : ''}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedProperty.price_per_sqft && (
+                  <div className="flex flex-col">
+                    <span className="text-sm text-gray-500">Price per sq.ft</span>
+                    <div className="flex items-center gap-1 mt-1">
+                      <PoundSterling className="h-4 w-4 text-gray-600" />
+                      <span className="font-medium">{formatCurrency(selectedProperty.price_per_sqft)}</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Investment dashboard section */}
+              <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
+                <h3 className="text-lg font-semibold mb-3 flex items-center">
+                  <TrendingUp className="h-5 w-5 mr-2 text-emerald-600" />
+                  Investment Dashboard
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* ROI and Yield Section */}
+                  <div className="space-y-4">
+                    {selectedProperty.estimated_rent && (
+                      <div className="bg-blue-50 p-3 rounded">
+                        <p className="text-blue-800 text-sm font-medium">Estimated Monthly Rent</p>
+                        <p className="text-blue-600 text-lg font-bold mt-1">
+                          {formatCurrency(selectedProperty.estimated_rent)}/month
+                        </p>
+                        {selectedProperty.rental_yield && (
+                          <p className="text-blue-600 text-sm mt-1">
+                            {selectedProperty.rental_yield.toFixed(1)}% yield
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    
+                    {selectedProperty.roi && (
+                      <div className="bg-purple-50 p-3 rounded">
+                        <p className="text-purple-800 text-sm font-medium">5-Year ROI Estimate</p>
+                        <p className="text-purple-600 text-lg font-bold mt-1">
+                          {selectedProperty.roi.toFixed(1)}%
+                        </p>
+                        {selectedProperty.estimated_growth && (
+                          <p className="text-purple-600 text-sm mt-1">
+                            {selectedProperty.estimated_growth.toFixed(1)}% annual growth
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Mortgage Calculator Section */}
+                  {mortgageDetails && (
+                    <div className="bg-emerald-50 p-3 rounded">
+                      <p className="text-emerald-800 text-sm font-medium">Mortgage Estimate (25% deposit)</p>
+                      <p className="text-emerald-600 text-lg font-bold mt-1">
+                        {formatCurrency(mortgageDetails.monthlyPayment)}/month
+                      </p>
+                      <div className="mt-2 text-sm text-emerald-700 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Deposit (25%):</span>
+                          <span>{formatCurrency(mortgageDetails.downPayment)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Loan amount:</span>
+                          <span>{formatCurrency(mortgageDetails.loanAmount)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Term:</span>
+                          <span>25 years at 4.5%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Cash Flow Analysis */}
+                {selectedProperty.estimated_rent && mortgageDetails && (
+                  <div className="mt-4 bg-white p-3 rounded border border-gray-100">
+                    <p className="text-gray-800 text-sm font-medium">Monthly Cash Flow Analysis</p>
+                    <div className="mt-2 space-y-1 text-sm">
+                      <div className="flex justify-between">
+                        <span>Rental Income:</span>
+                        <span className="text-emerald-600">+{formatCurrency(selectedProperty.estimated_rent)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Mortgage Payment:</span>
+                        <span className="text-red-600">-{formatCurrency(mortgageDetails.monthlyPayment)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Management (10%):</span>
+                        <span className="text-red-600">-{formatCurrency(selectedProperty.estimated_rent * 0.1)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Maintenance (5%):</span>
+                        <span className="text-red-600">-{formatCurrency(selectedProperty.estimated_rent * 0.05)}</span>
+                      </div>
+                      <div className="flex justify-between font-bold pt-2 border-t border-gray-100 mt-2">
+                        <span>Net Cash Flow:</span>
+                        <span className={`${selectedProperty.estimated_rent - mortgageDetails.monthlyPayment - selectedProperty.estimated_rent * 0.15 > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {formatCurrency(selectedProperty.estimated_rent - mortgageDetails.monthlyPayment - selectedProperty.estimated_rent * 0.15)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+              
+              {/* Purchase costs breakdown */}
+              {selectedProperty.stamp_duty !== undefined && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3">Purchase Costs</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-amber-50 p-3 rounded">
+                      <p className="text-amber-800 text-sm font-medium">Stamp Duty</p>
+                      <p className="text-amber-600 text-lg font-bold mt-1">
+                        {formatCurrency(selectedProperty.stamp_duty)}
+                      </p>
+                      <p className="text-amber-700 text-xs mt-2">
+                        First-time buyer? You may qualify for lower rates.
+                      </p>
+                    </div>
+                    
+                    <div className="bg-emerald-50 p-3 rounded">
+                      <p className="text-emerald-800 text-sm font-medium">Total Purchase Cost</p>
+                      <p className="text-emerald-600 text-lg font-bold mt-1">
+                        {formatCurrency(price + (selectedProperty.stamp_duty || 0))}
+                      </p>
+                      <div className="mt-2 text-sm text-emerald-700 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Property price:</span>
+                          <span>{formatCurrency(price)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Stamp duty:</span>
+                          <span>{formatCurrency(selectedProperty.stamp_duty || 0)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Legal fees (est.):</span>
+                          <span>{formatCurrency(1500)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {/* Area insights with visualization */}
+              {areaInsights.priceHistory?.data?.trend_percentage !== undefined && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center">
+                    <AreaChart className="h-5 w-5 mr-2 text-blue-600" />
+                    Area Insights
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="bg-cyan-50 p-3 rounded">
+                      <p className="text-cyan-800 text-sm font-medium">Area Price Trend</p>
+                      <div className="flex items-center gap-1 mt-1">
+                        {areaInsights.priceHistory.data.trend_percentage > 0 ? (
+                          <ArrowUpRight className="h-5 w-5 text-emerald-600" />
+                        ) : (
+                          <ArrowDownRight className="h-5 w-5 text-red-600" />
+                        )}
+                        <p className={`text-lg font-bold ${areaInsights.priceHistory.data.trend_percentage > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {areaInsights.priceHistory.data.trend_percentage.toFixed(1)}%
+                        </p>
+                      </div>
+                      <p className="text-cyan-600 text-sm mt-1">Last 12 months</p>
+                      
+                      {/* Add simple visual trend indicator */}
+                      <div className="mt-3 h-10 bg-white rounded overflow-hidden">
+                        <div 
+                          className={`h-full ${areaInsights.priceHistory.data.trend_percentage > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
+                          style={{ width: `${Math.min(Math.abs(areaInsights.priceHistory.data.trend_percentage) * 3, 100)}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                    
+                    {areaInsights.askingPrices?.data?.mean && (
+                      <div className="bg-teal-50 p-3 rounded">
+                        <p className="text-teal-800 text-sm font-medium">Average Area Price</p>
+                        <p className="text-teal-600 text-lg font-bold mt-1">
+                          {formatCurrency(areaInsights.askingPrices.data.mean)}
+                        </p>
+                        {price > 0 && (
+                          <div>
+                            <p className="text-teal-600 text-sm mt-1">
+                              This property is <strong>{price < areaInsights.askingPrices.data.mean ? 'below' : 'above'}</strong> average
+                            </p>
+                            
+                            {/* Add visual price comparison */}
+                            <div className="mt-3 relative h-10 bg-gray-100 rounded overflow-hidden">
+                              <div className="absolute inset-0 flex">
+                                <div className="h-full bg-teal-200" style={{ width: '50%' }}></div>
+                                <div className="h-full bg-teal-300" style={{ width: '50%' }}></div>
+                              </div>
+                              <div 
+                                className="absolute top-0 h-full w-1 bg-black"
+                                style={{ 
+                                  left: '50%',
+                                  transform: 'translateX(-50%)'
+                                }}
+                              ></div>
+                              <div 
+                                className="absolute top-0 h-full w-2 bg-emerald-600 rounded"
+                                style={{ 
+                                  left: `${Math.min(Math.max((price / areaInsights.askingPrices.data.mean) * 50, 10), 90)}%`,
+                                  transform: 'translateX(-50%)'
+                                }}
+                              ></div>
+                            </div>
+                            <div className="flex justify-between text-xs mt-1 text-gray-600">
+                              <span>-50%</span>
+                              <span>Average</span>
+                              <span>+50%</span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+              
+              {/* Additional property details if available */}
+              {selectedProperty.description && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-2">Description</h3>
+                  <p className="text-gray-600">{selectedProperty.description}</p>
+                </div>
+              )}
+              
+              {/* If there are sold history records, show them with visualization */}
+              {hasSaleHistory && saleHistoryData.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3 flex items-center">
+                    <TrendingUp className="h-5 w-5 mr-2 text-amber-600" />
+                    Sale History
+                  </h3>
+                  
+                  {/* Add price growth indicator if we have multiple sales */}
+                  {priceGrowth !== null && (
+                    <div className="mb-3 p-3 rounded bg-amber-50">
+                      <div className="flex items-center">
+                        <span className="text-amber-800 text-sm mr-2">Total Price Growth:</span>
+                        <span className={`font-bold ${priceGrowth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {priceGrowth >= 0 ? '+' : ''}{priceGrowth.toFixed(1)}%
+                        </span>
+                      </div>
+                      
+                      {/* Add time period */}
+                      {saleHistoryData.length >= 2 && (
+                        <div className="text-xs text-amber-700 mt-1">
+                          Over {Math.round((new Date(saleHistoryData[saleHistoryData.length - 1].date).getTime() - 
+                                          new Date(saleHistoryData[0].date).getTime()) / 
+                                          (1000 * 60 * 60 * 24 * 365))} years 
+                          ({new Date(saleHistoryData[0].date).getFullYear()} to {new Date(saleHistoryData[saleHistoryData.length - 1].date).getFullYear()})
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Price history visualization */}
+                  {saleHistoryData.length >= 2 && (
+                    <div className="mb-4 bg-white p-3 rounded border border-gray-100">
+                      <div className="h-32 relative">
+                        {/* Simple chart visualization */}
+                        <div className="absolute bottom-0 left-0 right-0 flex items-end h-full">
+                          {saleHistoryData.map((sale: any, idx: number) => {
+                            const maxPrice = Math.max(...saleHistoryData.map((s: any) => s.price));
+                            const height = (sale.price / maxPrice) * 100;
+                            const width = `${100 / saleHistoryData.length}%`;
+                            const margin = idx > 0 ? '0 0 0 1px' : '0';
+                            return (
+                              <div 
+                                key={idx}
+                                className="bg-emerald-500 hover:bg-emerald-600 transition-colors relative group"
+                                style={{ 
+                                  height: `${height}%`,
+                                  width,
+                                  margin
+                                }}
+                              >
+                                {/* Tooltip on hover */}
+                                <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                                  <div>{formatCurrency(sale.price)}</div>
+                                  <div>{new Date(sale.date).toLocaleDateString()}</div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-500 mt-2">
+                        {saleHistoryData.map((sale: any, idx: number) => (
+                          <div key={idx}>
+                            {new Date(sale.date).getFullYear()}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Detailed sale history table */}
+                  <div className="space-y-2">
+                    {saleHistoryData.map((sale: any, idx: number) => (
+                      <div key={idx} className="flex justify-between border-b border-gray-100 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4 text-gray-600" />
+                          <span>{new Date(sale.date).toLocaleDateString()}</span>
+                        </div>
+                        <span className="font-medium">
+                          {typeof sale.price === 'number' && !isNaN(sale.price) 
+                            ? formatCurrency(sale.price) 
+                            : 'Price not available'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Display nearby amenities if available */}
+              {selectedProperty.nearby_stations && selectedProperty.nearby_stations.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3">Nearby Transport</h3>
+                  <div className="space-y-2">
+                    {selectedProperty.nearby_stations.map((station: any, idx: number) => (
+                      <div key={idx} className="flex justify-between border-b border-gray-100 pb-2">
+                        <span>{station.name}</span>
+                        <span className="text-gray-600">{station.distance} miles</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+              {/* Display nearby schools if available */}
+              {selectedProperty.nearby_schools && selectedProperty.nearby_schools.length > 0 && (
+                <div className="mb-6">
+                  <h3 className="text-lg font-semibold mb-3">Nearby Schools</h3>
+                  <div className="space-y-2">
+                    {selectedProperty.nearby_schools.map((school: any, idx: number) => (
+                      <div key={idx} className="flex justify-between border-b border-gray-100 pb-2">
+                        <span>{school.name}</span>
+                        <span className="text-gray-600">{school.distance} miles</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -734,6 +1404,37 @@ export default function Listings() {
                 {isLoading ? <LoadingSpinner size="sm" /> : 'Search'}
               </Button>
             </div>
+
+            {/* Add advanced options toggles */}
+            <div className="mt-4 flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input 
+                  type="checkbox" 
+                  checked={showPricePerSqft} 
+                  onChange={(e) => setShowPricePerSqft(e.target.checked)}
+                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                Show price per sq.ft
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input 
+                  type="checkbox" 
+                  checked={showStampDuty} 
+                  onChange={(e) => setShowStampDuty(e.target.checked)}
+                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                Show stamp duty
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input 
+                  type="checkbox" 
+                  checked={showPlanningApplications} 
+                  onChange={(e) => setShowPlanningApplications(e.target.checked)}
+                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
+                />
+                Show planning applications
+              </label>
+            </div>
           </div>
         </div>
 
@@ -744,6 +1445,38 @@ export default function Listings() {
           </div>
         ) : displayProperties.length > 0 ? (
           <>
+            {/* Area insights summary - show average prices, trends, etc. */}
+            {areaInsights.askingPrices?.data && (
+              <div className="mb-8 bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-semibold mb-4">Area Insights for {searchTerm}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-emerald-50 rounded-lg p-4">
+                    <h4 className="text-emerald-800 text-sm font-medium mb-2">Average Asking Price</h4>
+                    <p className="text-2xl font-bold text-emerald-700">
+                      {formatCurrency(areaInsights.askingPrices.data.mean || 0)}
+                    </p>
+                  </div>
+                  
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <h4 className="text-blue-800 text-sm font-medium mb-2">Median Asking Price</h4>
+                    <p className="text-2xl font-bold text-blue-700">
+                      {formatCurrency(areaInsights.askingPrices.data.median || 0)}
+                    </p>
+                  </div>
+                  
+                  {areaInsights.priceHistory?.data?.trend_percentage !== undefined && (
+                    <div className="bg-purple-50 rounded-lg p-4">
+                      <h4 className="text-purple-800 text-sm font-medium mb-2">Price Trend (12 months)</h4>
+                      <p className="text-2xl font-bold text-purple-700">
+                        {areaInsights.priceHistory.data.trend_percentage.toFixed(1)}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Properties grid */}
             <div className="mb-6">
               <h3 className="text-lg text-gray-600">
                 Found {totalResults} {viewMode === 'listed' ? 'listed' : 'sold'} properties
@@ -751,7 +1484,11 @@ export default function Listings() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {displayProperties.map((property, index) => (
-                <Card key={`${property.address}-${index}`} className="overflow-hidden hover:shadow-lg transition-shadow duration-200">
+                <Card 
+                  key={`${property.address}-${index}`} 
+                  className="overflow-hidden hover:shadow-lg transition-shadow duration-200 cursor-pointer"
+                  onClick={() => openPropertyModal(property)}
+                >
                   {viewMode === 'listed' ? (
                     <>
                       <div className="aspect-video relative bg-gray-100">
@@ -855,6 +1592,16 @@ export default function Listings() {
                             0
                           )}
                         </p>
+                        
+                        {/* Show price per sq ft if available and enabled */}
+                        {showPricePerSqft && property.price_per_sqft && (
+                          <p className="text-sm text-gray-600 mb-3">
+                            {formatCurrency(property.price_per_sqft)}/sq.ft
+                            {property.size_sq_feet && ` · ${property.size_sq_feet} sq.ft`}
+                            {property.size_sq_meters && ` · ${property.size_sq_meters} m²`}
+                          </p>
+                        )}
+                        
                         <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
                           <div className="flex items-center gap-1">
                             <Bed className="h-4 w-4" />
@@ -870,11 +1617,21 @@ export default function Listings() {
                           </div>
                         </div>
                         
-                        {/* Investment Metrics */}
-                        {(property.estimated_rent || property.rental_yield || property.roi) && (
+                        {/* Stamp Duty section */}
+                        {showStampDuty && property.stamp_duty !== undefined && (
+                          <div className="mt-2 mb-3">
+                            <div className="flex justify-between items-center">
+                              <span className="text-sm text-gray-600">Stamp Duty:</span>
+                              <span className="font-medium">{formatCurrency(property.stamp_duty)}</span>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Enhanced Investment Metrics */}
+                        {(property.estimated_rent || property.rental_yield || property.roi || property.estimated_growth) && (
                           <div className="mt-3 pt-3 border-t border-gray-100">
                             <h4 className="text-sm font-semibold text-gray-700 mb-2">Investment Potential</h4>
-                            <div className="grid grid-cols-3 gap-2 text-xs">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                               {property.estimated_rent && (
                                 <div className="bg-blue-50 p-2 rounded">
                                   <p className="text-blue-800 font-medium">Est. Rent</p>
@@ -889,7 +1646,7 @@ export default function Listings() {
                               )}
                               {property.roi && (
                                 <div className="bg-purple-50 p-2 rounded">
-                                  <p className="text-purple-800 font-medium">ROI</p>
+                                  <p className="text-purple-800 font-medium">5yr ROI</p>
                                   <p className="text-purple-600 font-bold">{property.roi.toFixed(1)}%</p>
                                 </div>
                               )}
@@ -938,11 +1695,21 @@ export default function Listings() {
                         )}
                       </div>
                       
-                      {/* Investment Metrics */}
-                      {(property.estimated_rent || property.rental_yield || property.roi) && (
+                      {/* Stamp Duty section */}
+                      {showStampDuty && property.stamp_duty !== undefined && (
+                        <div className="mt-2 mb-3">
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-gray-600">Stamp Duty:</span>
+                            <span className="font-medium">{formatCurrency(property.stamp_duty)}</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Enhanced Investment Metrics */}
+                      {(property.estimated_rent || property.rental_yield || property.roi || property.estimated_growth) && (
                         <div className="mt-3 pt-3 border-t border-gray-100">
                           <h4 className="text-sm font-semibold text-gray-700 mb-2">Investment Potential</h4>
-                          <div className="grid grid-cols-3 gap-2 text-xs">
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
                             {property.estimated_rent && (
                               <div className="bg-blue-50 p-2 rounded">
                                 <p className="text-blue-800 font-medium">Est. Rent</p>
@@ -957,7 +1724,7 @@ export default function Listings() {
                             )}
                             {property.roi && (
                               <div className="bg-purple-50 p-2 rounded">
-                                <p className="text-purple-800 font-medium">ROI</p>
+                                <p className="text-purple-800 font-medium">5yr ROI</p>
                                 <p className="text-purple-600 font-bold">{property.roi.toFixed(1)}%</p>
                               </div>
                             )}
@@ -1007,6 +1774,9 @@ export default function Listings() {
           </div>
         )}
       </main>
+      
+      {/* Render the modal component */}
+      <PropertyModal />
     </Layout>
   );
 } 

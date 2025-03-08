@@ -91,7 +91,7 @@ const MobileNavLinks = [
     requiresAuth: false
   },
   {
-    title: "Help & Support",
+    title: "Support",
     href: "/help",
     icon: "❓",
     requiresAuth: false
@@ -193,9 +193,9 @@ export default function Header({
                 </a>
 
                 {/* Desktop Navigation */}
-                <NavigationMenu className="hidden lg:flex">
+              <NavigationMenu className="hidden lg:flex">
                   <NavigationMenuList className="gap-2">
-                    <NavigationMenuItem>
+                  <NavigationMenuItem>
                       <NavigationMenuTrigger 
                         className={cn(
                           "text-sm font-medium rounded-full px-4",
@@ -203,18 +203,18 @@ export default function Header({
                           "data-[state=open]:bg-gray-100"
                         )}
                       >
-                        Market
-                      </NavigationMenuTrigger>
-                      <NavigationMenuContent>
+                      Market
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
                         <ul className="w-[400px] gap-3 p-4 rounded-2xl">
                           {isAuthenticated ? (
                             <>
-                              <ListItem href="/trends" title="Market Trends">
-                                Stay updated with the latest real estate market trends.
-                              </ListItem>
-                              <ListItem href="/insights" title="Market Insights">
-                                Deep dive into property market analytics and forecasts.
-                              </ListItem>
+                        <ListItem href="/trends" title="Market Trends">
+                          Stay updated with the latest real estate market trends.
+                        </ListItem>
+                        <ListItem href="/insights" title="Market Insights">
+                          Deep dive into property market analytics and forecasts.
+                        </ListItem>
                             </>
                           ) : (
                             <>
@@ -240,26 +240,26 @@ export default function Header({
                               </ListItem>
                             </>
                           )}
-                          <ListItem href="/research" title="Research & Reports">
-                            Access expert analysis and reports.
-                          </ListItem>
-                        </ul>
-                      </NavigationMenuContent>
-                    </NavigationMenuItem>
+                        <ListItem href="/research" title="Research & Reports">
+                          Access expert analysis and reports.
+                        </ListItem>
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
 
-                    <NavigationMenuItem>
-                      <NavigationMenuLink
+                  <NavigationMenuItem>
+                    <NavigationMenuLink
                         className={cn(
                           "text-sm font-medium rounded-full px-4 py-2",
                           "hover:bg-gray-100 transition-colors"
                         )}
-                        href="/deals"
-                      >
-                        Deals
-                      </NavigationMenuLink>
-                    </NavigationMenuItem>
+                      href="/deals"
+                    >
+                      Deals
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
 
-                    <NavigationMenuItem>
+                  <NavigationMenuItem>
                       <NavigationMenuLink
                         className={cn(
                           "text-sm font-medium rounded-full px-4 py-2",
@@ -279,36 +279,36 @@ export default function Header({
                           "data-[state=open]:bg-gray-100"
                         )}
                       >
-                        Services
-                      </NavigationMenuTrigger>
-                      <NavigationMenuContent>
+                      Services
+                    </NavigationMenuTrigger>
+                    <NavigationMenuContent>
                         <ul className="w-[400px] gap-3 p-4 rounded-2xl">
-                          <ListItem href="/property-management" title="Property Management">
-                            Let us take care of your property.
-                          </ListItem>
-                          <ListItem href="/investment-opportunities" title="Investment Opportunities">
-                            Discover tailored investment strategies.
-                          </ListItem>
-                          <ListItem href="/calculators" title="Calculators">
-                            Calculate different aspects of your property investment.
-                          </ListItem>
-                        </ul>
-                      </NavigationMenuContent>
-                    </NavigationMenuItem>
+                        <ListItem href="/property-management" title="Property Management">
+                          Let us take care of your property.
+                        </ListItem>
+                        <ListItem href="/investment-opportunities" title="Investment Opportunities">
+                          Discover tailored investment strategies.
+                        </ListItem>
+                        <ListItem href="/calculators" title="Calculators">
+                          Calculate different aspects of your property investment.
+                        </ListItem>
+                      </ul>
+                    </NavigationMenuContent>
+                  </NavigationMenuItem>
 
-                    <NavigationMenuItem>
-                      <NavigationMenuLink
+                  <NavigationMenuItem>
+                    <NavigationMenuLink
                         className={cn(
                           "text-sm font-medium rounded-full px-4 py-2",
                           "hover:bg-gray-100 transition-colors"
                         )}
-                        href="/pricing"
-                      >
-                        Pricing
-                      </NavigationMenuLink>
-                    </NavigationMenuItem>
-                  </NavigationMenuList>
-                </NavigationMenu>
+                      href="/pricing"
+                    >
+                      Pricing
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                </NavigationMenuList>
+              </NavigationMenu>
               </div>
 
               {/* Right Side Actions */}
@@ -330,7 +330,7 @@ export default function Header({
                       "hover:bg-gray-100 transition-colors"
                     )}
                   >
-                    Help & Support
+                    Support
                   </a>
                   <a 
                     href="/about-us"

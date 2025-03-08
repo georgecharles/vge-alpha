@@ -1,0 +1,3466 @@
+openapi: 3.0.2
+info:
+  title: PaTMa
+  version: 0.1.0
+  description: API documentation
+paths:
+  /api/prospector/{version}/asking-prices/:
+    get:
+      operationId: listAskingPrices
+      description: Find statistics (mean and median) for properties currently listed
+        for sale, centred around a postcode or location.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: bedrooms
+        in: query
+        required: true
+        description: The number of bedrooms for a property
+        schema:
+          type: integer
+      - name: property_type
+        in: query
+        required: true
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+      - name: min_data_points
+        in: query
+        required: false
+        description: The minimum number of data points to find
+        schema:
+          type: integer
+          default: '20'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      data_points:
+                        type: integer
+                        description: The number of property listings found
+                      radius:
+                        type: number
+                        description: The furthest distance in miles of the property
+                          listings
+                      mean:
+                        type: number
+                        description: The mean of the asking prices for the property
+                          listings
+                      median:
+                        type: number
+                        description: The median of the asking prices for the property
+                          listings
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  bedrooms:
+                    type: integer
+                    description: The bedrooms parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  bedrooms:
+                    type: integer
+                    description: The bedrooms parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/asking-prices-floor-area/:
+    get:
+      operationId: listAskingPricesFloorAreas
+      description: Find price per floor area statistics (mean and median) for properties
+        currently listed for sale, centred around a postcode or location.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: bedrooms
+        in: query
+        required: true
+        description: The number of bedrooms for a property
+        schema:
+          type: integer
+      - name: property_type
+        in: query
+        required: true
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+      - name: min_data_points
+        in: query
+        required: false
+        description: The minimum number of data points to find
+        schema:
+          type: integer
+          default: '20'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      data_points:
+                        type: integer
+                        description: The number of property listings found
+                      radius:
+                        type: number
+                        description: The furthest distance in miles of the property
+                          listings
+                      mean_per_sqft:
+                        type: number
+                        description: The mean of the asking price per floor area in
+                          square feet
+                      mean_per_sqm:
+                        type: number
+                        description: The mean of the asking price per floor area in
+                          square metres
+                      median_per_sqft:
+                        type: number
+                        description: The median of the asking price per floor area
+                          in square feet
+                      median_per_sqm:
+                        type: number
+                        description: The median of the asking price per floor area
+                          in square metres
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  bedrooms:
+                    type: integer
+                    description: The bedrooms parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  bedrooms:
+                    type: integer
+                    description: The bedrooms parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/stamp-duty/:
+    get:
+      operationId: listStampDutys
+      description: Calculate the stamp duty (SDLT, LBTT, LTT) due for a given property
+        value. Response includes primary and second homes.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: country
+        in: query
+        required: false
+        description: A valid UK country
+        schema:
+          type: string
+          enum:
+          - england
+          - wales
+          - scotland
+          - northern-ireland
+      - name: value
+        in: query
+        required: true
+        description: The value of a property
+        schema:
+          type: number
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  tax_name:
+                    type: string
+                    description: The name of the tax scheme used in the calculation
+                    enum:
+                    - LTT
+                    - LBTT
+                    - SDLT
+                  data:
+                    type: object
+                    properties:
+                      second_home:
+                        type: object
+                        properties:
+                          transaction_type:
+                            type: string
+                            enum:
+                            - second_home
+                          tax_payable:
+                            type: number
+                            description: The amount of stamp duty tax due
+                          effective_tax_rate:
+                            type: number
+                            description: The rate of stamp duty tax due
+                      primary_home:
+                        type: object
+                        properties:
+                          transaction_type:
+                            type: string
+                            enum:
+                            - primary_home
+                          tax_payable:
+                            type: number
+                            description: The amount of stamp duty tax due
+                          effective_tax_rate:
+                            type: number
+                            description: The rate of stamp duty tax due
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  country:
+                    type: string
+                    description: The country parameter provided
+                  value:
+                    type: number
+                    description: The value parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  country:
+                    type: string
+                    description: The country parameter provided
+                  value:
+                    type: number
+                    description: The value parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/sold-prices/:
+    get:
+      operationId: listSoldPrices
+      description: Find statistics (mean and median) on the sold property prices closest
+        to the given postcode or location. Optionally apply indexation to retrieve
+        current values rather than historical averages.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: property_type
+        in: query
+        required: true
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+          - bungalow
+      - name: tenure
+        in: query
+        required: false
+        description: The type of tenure for a property
+        schema:
+          type: string
+          enum:
+          - freehold
+          - leasehold
+      - name: new_build
+        in: query
+        required: false
+        description: The new build attribute of a property
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+      - name: max_age_months
+        in: query
+        required: false
+        description: The maximum age in months to find sold prices
+        schema:
+          type: integer
+          default: '18'
+      - name: min_data_points
+        in: query
+        required: false
+        description: The minimum number of data points to find
+        schema:
+          type: integer
+          default: '20'
+      - name: apply_indexation
+        in: query
+        required: false
+        description: Whether to adjust sold prices to their current value
+        schema:
+          type: boolean
+          default: 'false'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      data_points:
+                        type: integer
+                        description: The number of sold prices found
+                      radius:
+                        type: number
+                        description: The furthest distance in miles of the sold prices
+                      earliest_sale_date:
+                        type: string
+                        description: The earliest date for the sold prices
+                      latest_sale_date:
+                        type: string
+                        description: The latest date for the sold prices
+                      mean:
+                        type: number
+                        description: The mean of the sold prices
+                      median:
+                        type: number
+                        description: The median of the sold prices
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/sold-prices-floor-area/:
+    get:
+      operationId: listSoldPricesFloorAreas
+      description: Find price per floor area statistics (mean and median) on the sold
+        property prices closest to the given postcode or location. Optionally apply
+        indexation to retrieve current values rather than historical averages.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: property_type
+        in: query
+        required: true
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+          - bungalow
+      - name: tenure
+        in: query
+        required: false
+        description: The type of tenure for a property
+        schema:
+          type: string
+          enum:
+          - freehold
+          - leasehold
+      - name: new_build
+        in: query
+        required: false
+        description: The new build attribute of a property
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+      - name: max_age_months
+        in: query
+        required: false
+        description: The maximum age in months to find sold prices
+        schema:
+          type: integer
+          default: '18'
+      - name: min_data_points
+        in: query
+        required: false
+        description: The minimum number of data points to find
+        schema:
+          type: integer
+          default: '20'
+      - name: apply_indexation
+        in: query
+        required: false
+        description: Whether to adjust sold prices to their current value
+        schema:
+          type: boolean
+          default: 'false'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      data_points:
+                        type: integer
+                        description: The number of sold prices found
+                      radius:
+                        type: number
+                        description: The furthest distance in miles of the sold prices
+                      earliest_sale_date:
+                        type: string
+                        description: The earliest date for the sold prices
+                      latest_sale_date:
+                        type: string
+                        description: The latest date for the sold prices
+                      mean_per_sqft:
+                        type: number
+                        description: The mean of the sold prices per floor area in
+                          square feet
+                      mean_per_sqm:
+                        type: number
+                        description: The mean of the sold prices per floor area in
+                          square metres
+                      median_per_sqft:
+                        type: number
+                        description: The median of the sold prices per floor area
+                          in square feet
+                      median_per_sqm:
+                        type: number
+                        description: The median of the sold prices per floor area
+                          in square metres
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/sold-prices-floor-area-within/:
+    get:
+      operationId: listSoldPricesFloorAreaWithins
+      description: Find price per floor area statistics (mean and median) on the sold
+        property prices within an area - centre and radius, or a polygon. Optionally
+        apply indexation to retrieve current values rather than historical averages.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: property_type
+        in: query
+        required: true
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+          - bungalow
+      - name: tenure
+        in: query
+        required: false
+        description: The type of tenure for a property
+        schema:
+          type: string
+          enum:
+          - freehold
+          - leasehold
+      - name: new_build
+        in: query
+        required: false
+        description: The new build attribute of a property
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+      - name: max_age_months
+        in: query
+        required: false
+        description: The maximum age in months to find sold prices
+        schema:
+          type: integer
+          default: '18'
+      - name: apply_indexation
+        in: query
+        required: false
+        description: Whether to adjust sold prices to their current value
+        schema:
+          type: boolean
+          default: 'false'
+      - name: radius
+        in: query
+        required: false
+        description: The number of miles radius from the postcode to search - between
+          0.2 and 10
+        schema:
+          type: number
+      - name: polygon
+        in: query
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              example: '{"coordinates": [ [ [ ] ] ], "type": "Polygon"}'
+        description: A GeoJSON compatible polygon in JSON format
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      data_points:
+                        type: integer
+                        description: The number of sold prices found
+                      earliest_sale_date:
+                        type: string
+                        description: The earliest date for the sold prices
+                      latest_sale_date:
+                        type: string
+                        description: The latest date for the sold prices
+                      mean_per_sqft:
+                        type: number
+                        description: The mean of the sold prices per floor area in
+                          square feet
+                      mean_per_sqm:
+                        type: number
+                        description: The mean of the sold prices per floor area in
+                          square metres
+                      median_per_sqft:
+                        type: number
+                        description: The median of the sold prices per floor area
+                          in square feet
+                      median_per_sqm:
+                        type: number
+                        description: The median of the sold prices per floor area
+                          in square metres
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: An error response
+      tags:
+      - api
+    post:
+      operationId: createSoldPricesFloorAreaWithin
+      description: Find price per floor area statistics (mean and median) on the sold
+        property prices within an area - centre and radius, or a polygon. Optionally
+        apply indexation to retrieve current values rather than historical averages.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: property_type
+        in: query
+        required: true
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+          - bungalow
+      - name: tenure
+        in: query
+        required: false
+        description: The type of tenure for a property
+        schema:
+          type: string
+          enum:
+          - freehold
+          - leasehold
+      - name: new_build
+        in: query
+        required: false
+        description: The new build attribute of a property
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+      - name: max_age_months
+        in: query
+        required: false
+        description: The maximum age in months to find sold prices
+        schema:
+          type: integer
+          default: '18'
+      - name: apply_indexation
+        in: query
+        required: false
+        description: Whether to adjust sold prices to their current value
+        schema:
+          type: boolean
+          default: 'false'
+      - name: radius
+        in: query
+        required: false
+        description: The number of miles radius from the postcode to search - between
+          0.2 and 10
+        schema:
+          type: number
+      - name: polygon
+        in: query
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              example: '{"coordinates": [ [ [ ] ] ], "type": "Polygon"}'
+        description: A GeoJSON compatible polygon in JSON format
+      requestBody:
+        content:
+          application/json:
+            schema: {}
+          application/x-www-form-urlencoded:
+            schema: {}
+          multipart/form-data:
+            schema: {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: {}
+          description: ''
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: An error response
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      data_points:
+                        type: integer
+                        description: The number of sold prices found
+                      earliest_sale_date:
+                        type: string
+                        description: The earliest date for the sold prices
+                      latest_sale_date:
+                        type: string
+                        description: The latest date for the sold prices
+                      mean_per_sqft:
+                        type: number
+                        description: The mean of the sold prices per floor area in
+                          square feet
+                      mean_per_sqm:
+                        type: number
+                        description: The mean of the sold prices per floor area in
+                          square metres
+                      median_per_sqft:
+                        type: number
+                        description: The median of the sold prices per floor area
+                          in square feet
+                      median_per_sqm:
+                        type: number
+                        description: The median of the sold prices per floor area
+                          in square metres
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: A successful response
+      tags:
+      - api
+  /api/prospector/{version}/sold-prices-within/:
+    get:
+      operationId: listSoldPricesWithins
+      description: Find statistics (mean and median) on all the sold property prices
+        within an area - centre and radius, or a polygon. Optionally apply indexation
+        to retrieve current values rather than historical averages.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: radius
+        in: query
+        required: false
+        description: The number of miles radius from the postcode to search - between
+          0.2 and 10
+        schema:
+          type: number
+      - name: polygon
+        in: query
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              example: '{"coordinates": [ [ [ ] ] ], "type": "Polygon"}'
+        description: A GeoJSON compatible polygon in JSON format
+      - name: property_type
+        in: query
+        required: true
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+          - bungalow
+      - name: tenure
+        in: query
+        required: false
+        description: The type of tenure for a property
+        schema:
+          type: string
+          enum:
+          - freehold
+          - leasehold
+      - name: new_build
+        in: query
+        required: false
+        description: The new build attribute of a property
+        schema:
+          type: string
+          enum:
+          - 'true'
+          - 'false'
+      - name: max_age_months
+        in: query
+        required: false
+        description: The maximum age in months to find sold prices
+        schema:
+          type: integer
+          default: '18'
+      - name: apply_indexation
+        in: query
+        required: false
+        description: Whether to adjust sold prices to their current value
+        schema:
+          type: boolean
+          default: 'false'
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      data_points:
+                        type: integer
+                        description: The number of sold prices found
+                      earliest_sale_date:
+                        type: string
+                        description: The earliest date for the sold prices
+                      latest_sale_date:
+                        type: string
+                        description: The latest date for the sold prices
+                      mean:
+                        type: number
+                        description: The mean of the sold prices
+                      median:
+                        type: number
+                        description: The median of the sold prices
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+                  tenure:
+                    type: string
+                    description: The tenure parameter provided
+                  new_build:
+                    type: string
+                    description: The new_build parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  apply_indexation:
+                    type: boolean
+                    description: The apply_indexation parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/floor-areas/:
+    get:
+      operationId: listFloorAreas
+      description: List properties with known floor areas, within a radius centred
+        around a postcode or location.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: property_type
+        in: query
+        required: false
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+      - name: radius
+        in: query
+        required: false
+        description: The number of miles radius to search - between 0.2 and 2
+        schema:
+          type: number
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      available_results:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            property_type:
+                              type: string
+                              description: The type of property
+                            inspection_date:
+                              type: string
+                              description: The date of the last inspection
+                            address:
+                              type: string
+                              description: The property address
+                            uprn:
+                              type: string
+                              description: The property UPRN
+                            built_form:
+                              type: string
+                              description: The property building type
+                            floor_area_sqft:
+                              type: number
+                              description: The property floor area in square feet
+                            floor_area_sqm:
+                              type: number
+                              description: The property floor area in square metres
+                            habitable_rooms:
+                              type: integer
+                              description: The number of habitable rooms for the property
+                            lat:
+                              type: number
+                              description: The latitude coordinate of the property
+                            lng:
+                              type: number
+                              description: The longitude coordinate of the property
+                      mean_floor_area_sqft:
+                        type: number
+                        description: The mean of the floor areas in square feet
+                      mean_floor_area_sqm:
+                        type: number
+                        description: The median of the floor areas in square metres
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/schools/:
+    get:
+      operationId: listSchools
+      description: List the closest schools centred around a postcode or location.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: max_results
+        in: query
+        required: false
+        description: The maximum number of schools to find - not greater than 50
+        schema:
+          type: integer
+          default: 10
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  num_results:
+                    type: number
+                    description: The number of schools found
+                  data:
+                    type: object
+                    properties:
+                      schools:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              description: The name of the school
+                            address:
+                              type: string
+                              description: The address for the school
+                            postcode:
+                              type: string
+                              description: The postcode for the school
+                            pupils:
+                              type: string
+                              description: The number of pupils at the school
+                            rating:
+                              type: string
+                              description: The rating of the school
+                            education_type:
+                              type: string
+                              description: The type of education for the school
+                            lat:
+                              type: number
+                              description: The latitude coordinate for the school
+                            lng:
+                              type: number
+                              description: The longitude coordinate for the school
+                            distance:
+                              type: number
+                              description: The distance in miles of the school from
+                                the postcode parameter
+                            type_of_establishment:
+                              type: string
+                              description: The type of school
+                            establishment_type_group:
+                              type: string
+                              description: The school group type
+                            boarders:
+                              type: string
+                              description: Whether the school has boarders
+                            official_sixth_form:
+                              type: string
+                              description: Whether the school has a sixth form
+                            gender:
+                              type: string
+                              description: The gender for the school
+                            religious_character:
+                              type: string
+                              description: The religion for the school
+                            ofsted_last_inspection:
+                              type: string
+                              description: The date of the last Ofsted inspection
+                            telephone_number:
+                              type: string
+                              description: The telephone number of the school
+                            uprn:
+                              type: integer
+                              description: The UPRN for the school
+                            school_capacity:
+                              type: integer
+                              description: The capacity of the school
+                            census_date:
+                              type: string
+                              description: The date of the last school census
+                            number_of_boys:
+                              type: integer
+                              description: Number of male pupils at the school
+                            number_of_girls:
+                              type: integer
+                              description: Number of female pupils at the school
+                            urn:
+                              type: integer
+                              description: The URN for the school
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/demographics/:
+    get:
+      operationId: listDemographics
+      description: Lookup census provided demographic details for the area containing
+        the given postcode.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: true
+        description: A valid UK postcode
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      qualifications:
+                        type: object
+                        properties:
+                          Degree or Similar:
+                            type: integer
+                          2+ A Levels:
+                            type: integer
+                          Apprenticeship:
+                            type: integer
+                          5+ GCSEs, an A-Level or 1-2 AS Levels:
+                            type: integer
+                          1-4 GCSEs:
+                            type: integer
+                          No GCSEs:
+                            type: integer
+                          Other:
+                            type: integer
+                      health:
+                        type: object
+                        properties:
+                          Very Good:
+                            type: integer
+                          Good:
+                            type: integer
+                          Fair:
+                            type: integer
+                          Bad:
+                            type: integer
+                          Very Bad:
+                            type: integer
+                      relationships:
+                        type: object
+                        properties:
+                          Single:
+                            type: integer
+                          Married:
+                            type: integer
+                          Separated:
+                            type: integer
+                          Divorced:
+                            type: integer
+                          Widowed:
+                            type: integer
+                          Same Sex:
+                            type: integer
+                      social_grade:
+                        type: object
+                        properties:
+                          AB - Higher and intermediate managerial, administrative, or professional:
+                            type: integer
+                          C1 - Supervisory, clerical, and junior managerial/administrative/professional:
+                            type: integer
+                          C2 - Skilled manual workers:
+                            type: integer
+                          DE - Semi-skilled and unskilled manual; state benefit/unemployed, & lowest grade:
+                            type: integer
+                      economic_activity:
+                        type: object
+                        properties:
+                          Full-Time Employee:
+                            type: integer
+                          Part-Time Employee:
+                            type: integer
+                          Self Employed:
+                            type: integer
+                          Unemployed:
+                            type: integer
+                          Student:
+                            type: integer
+                          Retired:
+                            type: integer
+                          Looking After Home or Family:
+                            type: integer
+                          Long-Term Sick or Disabled:
+                            type: integer
+                          Other:
+                            type: integer
+                      industry:
+                        type: object
+                        properties:
+                          Agriculture:
+                            type: integer
+                          Mining/Quarrying:
+                            type: integer
+                          Manufacturing:
+                            type: integer
+                          Energy Supply:
+                            type: integer
+                          Water Supply:
+                            type: integer
+                          Construction:
+                            type: integer
+                          Retail:
+                            type: integer
+                          Transportation:
+                            type: integer
+                          Accommodation and Food:
+                            type: integer
+                          Information and Communication:
+                            type: integer
+                          Financial Services:
+                            type: integer
+                          Real Estate:
+                            type: integer
+                          Professional, Scientific and Technical:
+                            type: integer
+                          Administration:
+                            type: integer
+                          Public Administration and Defence:
+                            type: integer
+                          Education:
+                            type: integer
+                          Health:
+                            type: integer
+                          Arts/Entertainment:
+                            type: integer
+                          Other:
+                            type: integer
+                      housing_types:
+                        type: object
+                        properties:
+                          Detached:
+                            type: integer
+                          Semi-Detached:
+                            type: integer
+                          Terraced:
+                            type: integer
+                          Flat (Purpose-Built):
+                            type: integer
+                          Flat (Converted):
+                            type: integer
+                          Residence in Commercial Building:
+                            type: integer
+                          Caravan/Park/Temporary:
+                            type: integer
+                      housing_tenure:
+                        type: object
+                        properties:
+                          Owned Outright:
+                            type: integer
+                          Owned with Mortgage:
+                            type: integer
+                          Shared Ownership:
+                            type: integer
+                          'Rented: From Council':
+                            type: integer
+                          'Rented: Other Social':
+                            type: integer
+                          'Rented: Private Landlord':
+                            type: integer
+                          'Rented: Private Other':
+                            type: integer
+                          Rent Free:
+                            type: integer
+                      housing_occupancy:
+                        type: object
+                        properties:
+                          One Person:
+                            type: integer
+                          Two People:
+                            type: integer
+                          Three People:
+                            type: integer
+                          Four People:
+                            type: integer
+                          Five People:
+                            type: integer
+                          Six People:
+                            type: integer
+                          Seven People:
+                            type: integer
+                          Eight or More People:
+                            type: integer
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/planning/:
+    get:
+      operationId: listPlannings
+      description: List property planning applications closest to a postcode or location.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: max_results
+        in: query
+        required: false
+        description: The maximum number of planning applications to find - not greater
+          than 200
+        schema:
+          type: integer
+          default: 10
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  num_results:
+                    type: number
+                    description: The number of planning applications found
+                  data:
+                    type: object
+                    properties:
+                      planning_applications:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            uprn:
+                              type: string
+                              description: The UPRN of the property
+                            lat:
+                              type: number
+                              description: The latitude coordinate of the property
+                            lng:
+                              type: number
+                              description: The longitude coordinate of the property
+                            distance:
+                              type: number
+                              description: The distance in miles of the property from
+                                the postcode parameter
+                            address:
+                              type: string
+                              description: The address for the property
+                            postcode:
+                              type: string
+                              description: The postcode for the property
+                            url:
+                              type: string
+                              description: The web address of the planning application
+                            planning_authority:
+                              type: string
+                              description: The name of the planning authority for
+                                the property
+                            ward_name:
+                              type: string
+                              description: The name of the ward for the property
+                            parish:
+                              type: string
+                              description: The name of the parish for the property
+                            reference:
+                              type: string
+                              description: The unique reference ID of the planning
+                                application
+                            description:
+                              type: string
+                              description: The description of the planning application
+                            case_officer:
+                              type: string
+                              description: The name of the case officer for the planning
+                                application
+                            agent:
+                              type: object
+                              properties:
+                                name:
+                                  type: string
+                                  description: The name of the agent for the planning
+                                    application
+                                company:
+                                  type: string
+                                  description: The company of the agent for the planning
+                                    application
+                                address:
+                                  type: string
+                                  description: The address of the agent for the planning
+                                    application
+                                tel:
+                                  type: string
+                                  description: The telephone number of the agent for
+                                    the planning application
+                            type:
+                              type: string
+                              description: The application type for the planning application
+                            decision_status:
+                              type: string
+                              description: The decision status for the planning application
+                            decision_text:
+                              type: string
+                              description: The decision text for the planning application
+                            appeal_status:
+                              type: string
+                              description: The appeal status for the planning application
+                            appeal_decision:
+                              type: string
+                              description: The appeal decision for the planning application
+                            date_received:
+                              type: string
+                              description: The date the planning application was received
+                            date_validated:
+                              type: string
+                              description: The date the planning application was validated
+                            date_decided:
+                              type: string
+                              description: The date the planning application was decided
+                            date_appeal:
+                              type: string
+                              description: The date the planning application was appealed
+                            date_last_updated:
+                              type: string
+                              description: The date the planning application was last
+                                updated
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/crime/:
+    get:
+      operationId: listCrimes
+      description: Lookup police provided crime data around the given postcode.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: true
+        description: A valid UK postcode
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      population:
+                        type: integer
+                        description: The total population count of the area
+                      crime_rating:
+                        type: string
+                        description: The crime rating for the area
+                        enum:
+                        - Very high
+                        - High
+                        - Average
+                        - Low
+                        - Very low
+                      crimes_last_12m:
+                        type: object
+                        description: Crimes during the last twelve months
+                        properties:
+                          total:
+                            type: integer
+                            description: The number of crimes for the area
+                          per_thousand:
+                            type: number
+                            description: The number of crimes per thousand population
+                              for the area
+                        additionalProperties:
+                          type: integer
+                          description: The number of crimes for a crime type
+                      above_national_average:
+                        type: array
+                        items:
+                          type: string
+                          description: A crime type that is above the national per
+                            thousand average
+                      below_national_average:
+                        type: array
+                        items:
+                          type: string
+                          description: A crime type that is below the national per
+                            thousand average
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/price-history/:
+    get:
+      operationId: listPriceHistorys
+      description: List month-by-month historical average property prices (as provided
+        by UKHPI) for the area containing the given postcode.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: true
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: property_type
+        in: query
+        required: false
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+          - null
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      price_history:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            month:
+                              type: string
+                              description: ISO formatted month and year
+                            month_display:
+                              type: string
+                              description: Month and year in format 'MMM YYYY'
+                            average_price:
+                              type: number
+                              description: Average house price
+                            12m_change_percent:
+                              type: number
+                              description: The percentage change in the average price
+                                compared to one year ago
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/geographies/:
+    get:
+      operationId: listGeographies
+      description: Lookup geographic classifications for the given postcode.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: true
+        description: A valid UK postcode
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      county:
+                        type: string
+                        description: County
+                      county_electoral_division:
+                        type: string
+                        description: County electoral division
+                      local_authority:
+                        type: string
+                        description: Local authority district / unitary authority
+                      electoral_ward:
+                        type: string
+                        description: Electoral ward / division
+                      parish:
+                        type: string
+                        description: Parish / community
+                      country:
+                        type: string
+                        description: Country
+                      parliamentary_constituency:
+                        type: string
+                        description: Westminster parliamentary constituency
+                      police_force:
+                        type: string
+                        description: Police force area
+                      travel_to_work_area:
+                        type: string
+                        description: Travel to work area
+                      region:
+                        type: string
+                        description: Region
+                      2001_census_oa:
+                        type: string
+                        description: 2001 Census output area
+                      2001_census_lsoa:
+                        type: string
+                        description: 2001 Census lower layer super output area / data
+                          zone
+                      2001_census_msoa:
+                        type: string
+                        description: 2001 Census middle layer super output area /
+                          intermediate zone
+                      2001_census_oac:
+                        type: string
+                        description: 2001 Census output area classification
+                      nhs_region:
+                        type: string
+                        description: NHS England region
+                      european_electoral_region:
+                        type: string
+                        description: European electoral region
+                      learning_region:
+                        type: string
+                        description: Local Learning and Skills Council / Dept. of
+                          Children, Education, Lifelong Learning and Skills / Enterprise
+                          Region
+                      primary_care_trust:
+                        type: string
+                        description: Primary Care Trust / Care Trust/ Care Trust Plus
+                          / Local Health Board / Community Health Partnership / Local
+                          Commissioning Group / Primary Healthcare Directorate
+                      international_territorial_level:
+                        type: string
+                        description: International territorial level
+                      statistical_ward:
+                        type: string
+                        description: Administrative and electoral areas used for statistical
+                          analysis
+                      census_area_statistics_ward:
+                        type: string
+                        description: Census area statistics ward
+                      national_park:
+                        type: string
+                        description: National park
+                      built_up_area:
+                        type: string
+                        description: Built-up area
+                      built_up_area_sub_division:
+                        type: string
+                        description: Built-up area sub-division
+                      2011_census_oa:
+                        type: string
+                        description: 2011 Census output area / small area
+                      2011_census_lsoa:
+                        type: string
+                        description: 2011 Census lower layer super output area / data
+                          zone
+                      2011_census_msoa:
+                        type: string
+                        description: 2011 Census midle layer super output area / intermediate
+                          zone
+                      2011_census_oac:
+                        type: string
+                        description: 2011 Census output area classification
+                      2011_census_workplace_zone:
+                        type: string
+                        description: 2011 Census workplace zone
+                      local_enterprise_partnership_first:
+                        type: string
+                        description: Local enterprise partnership first instance
+                      local_enterprise_partnership_second:
+                        type: string
+                        description: Local enterprise partnership second instance
+                      integrated_care_board:
+                        type: string
+                        description: Integrated care board
+                      sub_integrated_care_board:
+                        type: string
+                        description: Sub integrated care board
+                      2021_census_oa:
+                        type: string
+                        description: 2021 Census output area
+                      2021_census_lsoa:
+                        type: string
+                        description: 2021 Census lower layer super output area
+                      2021_census_msoa:
+                        type: string
+                        description: 2012 Census middle layer super output area
+                      planning_authority:
+                        type: string
+                        description: Name of the local planning authority
+                      planning_authority_url:
+                        type: string
+                        description: Website URL for the local planning authority
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/designated-areas/:
+    get:
+      operationId: listDesignatedAreas
+      description: Lookup designated (conservation) area classifications for the given
+        postcode.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: area_types
+        in: query
+        required: true
+        description: The type of areas
+        schema:
+          type: array
+          items:
+            type: string
+            enum:
+            - green_belt
+            - national_park
+            - conservation_area
+            - aonb
+        explode: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      areas:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            area_type:
+                              type: string
+                              description: The type of designated area
+                            within_area:
+                              type: boolean
+                              description: True if the postcode is within this type
+                                of area
+                            within_name:
+                              type: string
+                              description: Name of the designated area if within_area
+                                is true
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/list-property/:
+    get:
+      operationId: listListPropertys
+      description: List properties, optionally with sold price history, within an
+        area - centre and radius, or a polygon. See the sort_by parameter for details
+        on the sort order of results.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      - name: radius
+        in: query
+        required: false
+        description: The number of miles radius from the postcode to search - between
+          0.2 and 10
+        schema:
+          type: number
+      - name: polygon
+        in: query
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              example: '{"coordinates": [ [ [ ] ] ], "type": "Polygon"}'
+        description: A GeoJSON compatible polygon in JSON format
+      - name: property_type
+        in: query
+        required: false
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - terraced
+          - semi-detached
+          - detached
+      - name: bedrooms
+        in: query
+        required: false
+        description: The number of bedrooms for a property
+        schema:
+          type: integer
+      - name: require_sold_price
+        in: query
+        required: false
+        description: Only include records with a sold price
+        schema:
+          type: boolean
+          default: 'false'
+      - name: require_size
+        in: query
+        required: false
+        description: Only include records with a floor area
+        schema:
+          type: boolean
+          default: 'false'
+      - name: include_sold_history
+        in: query
+        required: false
+        description: Return historic sold prices per property
+        schema:
+          type: boolean
+          default: 'false'
+      - name: include_indexation_based_value
+        in: query
+        required: false
+        description: Whether to adjust the latest sold price to the current value
+        schema:
+          type: boolean
+          default: 'false'
+      - name: sort_by
+        in: query
+        required: false
+        description: 'Sort the results by this. Only used for point and radius searches,
+          with default: distance. Polygon searches always sort by most_recent_sale_date.'
+        schema:
+          type: string
+          enum:
+          - most_recent_sale_date
+          - distance
+      - name: page
+        in: query
+        required: false
+        description: The page number of results to return
+        schema:
+          type: number
+      - name: page_size
+        in: query
+        required: false
+        description: 'The number of results to return per page. This parameter can
+          affect the API credits used. When set the number of credits used will be:
+          ceil([number of results returned] / 100). Maximum value is 1000.'
+        schema:
+          type: number
+          default: 100
+      - name: records_after
+        in: query
+        required: false
+        description: Return records created after this date when require_sold_price
+          or require_size is chosen
+        schema:
+          type: string
+          default: DD/MM/YYYY
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      current_page:
+                        type: number
+                        description: The current page number of results returned
+                      number_of_pages:
+                        type: number
+                        description: The number of result pages available
+                      results_per_page:
+                        type: number
+                        description: The number of results per page
+                      total_results_count:
+                        type: number
+                        description: The total number of results available
+                      available_results:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            property_type:
+                              type: string
+                              description: The type of property
+                            inspection_date:
+                              type: string
+                              description: The date of the last inspection
+                            address:
+                              type: string
+                              description: The property address
+                            uprn:
+                              type: string
+                              description: The property UPRN
+                            built_form:
+                              type: string
+                              description: The property building type
+                            floor_area_sqft:
+                              type: number
+                              description: The property floor area in square feet
+                            floor_area_sqm:
+                              type: number
+                              description: The property floor area in square metres
+                            bedrooms:
+                              type: integer
+                              description: The number of bedrooms for the property
+                            bedrooms_estimated:
+                              type: boolean
+                              description: Whether the number of bedrooms is estimated
+                            habitable_rooms:
+                              type: integer
+                              description: The number of habitable rooms for the property
+                            lat:
+                              type: number
+                              description: The latitude coordinate of the property
+                            lng:
+                              type: number
+                              description: The longitude coordinate of the property
+                            tenure:
+                              type: string
+                              description: The type of tenure for the property
+                            last_sold_price:
+                              type: number
+                              description: The last sold price for the property
+                            last_sold_date:
+                              type: string
+                              description: The last sold date for the property
+                            last_sold_as_new:
+                              type: boolean
+                              description: True if the property was new when it was
+                                last sold.
+                            current_indexation_value:
+                              type: number
+                              description: The last sold price for the property adjusted
+                                to the current value
+                            sold_history:
+                              type: array
+                              description: The full sold price history for the property
+                              items:
+                                type: object
+                                properties:
+                                  amount:
+                                    type: number
+                                    description: The sold price for the property
+                                  date:
+                                    type: string
+                                    description: The sold date for the property
+                                  new:
+                                    type: boolean
+                                    description: True if the property was new.
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  bedrooms:
+                    type: integer
+                    description: The bedrooms parameter provided
+                  require_sold_price:
+                    type: boolean
+                    description: The require_sold_price parameter provided
+                  require_size:
+                    type: boolean
+                    description: The require_size parameter provided
+                  include_sold_history:
+                    type: boolean
+                    description: The include_sold_history parameter provided
+                  include_indexation_based_value:
+                    type: boolean
+                    description: The include_indexation_based_value parameter provided
+                  records_after:
+                    type: string
+                    description: The records_after parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+                  radius:
+                    type: number
+                    description: The radius parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+                  bedrooms:
+                    type: integer
+                    description: The bedrooms parameter provided
+                  require_sold_price:
+                    type: boolean
+                    description: The require_sold_price parameter provided
+                  require_size:
+                    type: boolean
+                    description: The require_size parameter provided
+                  include_sold_history:
+                    type: boolean
+                    description: The include_sold_history parameter provided
+                  include_indexation_based_value:
+                    type: boolean
+                    description: The include_indexation_based_value parameter provided
+                  records_after:
+                    type: string
+                    description: The records_after parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/listing-price-history/:
+    get:
+      operationId: listListingPriceHistorys
+      description: Listing price history for a property on a portal website.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: portal_url
+        in: query
+        required: true
+        description: A URL from a property portal website
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      price_history:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            date_created:
+                              type: string
+                              description: The date the listing price or availability
+                                changed.
+                            old_asking_price:
+                              type: number
+                              description: The previous asking price.
+                            old_available:
+                              type: boolean
+                              description: Whether the listing was previously available.
+                            old_available_text:
+                              type: string
+                              description: The previous availability text of the listing.
+                            new_asking_price:
+                              type: number
+                              description: The new asking price.
+                            new_available:
+                              type: boolean
+                              description: Whether the listing is available.
+                            new_available_text:
+                              type: string
+                              description: The new availability text of the listing.
+                  portal_url:
+                    type: string
+                    description: The portal URL parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  portal_url:
+                    type: string
+                    description: The portal URL parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/brma-lha-lookup/:
+    get:
+      operationId: listBrmaLhaLookups
+      description: Lookup BRMA and LHA rates for a postcode.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: true
+        description: A valid UK postcode
+        schema:
+          type: string
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      brma_code:
+                        type: integer
+                        description: The broad rental market area code or identifier.
+                      brma_name:
+                        type: string
+                        description: The name of the broad rental market area.
+                      rates:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            year:
+                              type: integer
+                              description: The calendar year of the LHA rate.
+                            beds:
+                              type: integer
+                              description: The number of beds in the property for
+                                the LHA rate.
+                            lha_rate:
+                              type: number
+                              description: The weekly local housing allowance rate.
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/rental-prices/:
+    get:
+      operationId: listRentalPrices
+      description: Find statistics (mean and median) for properties listed for rental
+        and centred around a postcode.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: bedrooms
+        in: query
+        required: true
+        description: The number of bedrooms for a property
+        schema:
+          type: integer
+      - name: property_type
+        in: query
+        required: true
+        description: The type of property
+        schema:
+          type: string
+          enum:
+          - flat
+          - house
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      data_points:
+                        type: integer
+                        description: The number of property listings found
+                      mean:
+                        type: number
+                        description: The mean of the rental prices for the property
+                          listings
+                      median:
+                        type: number
+                        description: The median of the rental prices for the property
+                          listings
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  bedrooms:
+                    type: integer
+                    description: The bedrooms parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  bedrooms:
+                    type: integer
+                    description: The bedrooms parameter provided
+                  property_type:
+                    type: string
+                    description: The property_type parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/uprn-links/:
+    get:
+      operationId: listUPRNLinks
+      description: Lookup linked information for a Unique Property Reference Number
+        (UPRN).
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: uprn
+        in: query
+        required: true
+        description: A valid Unique Property Reference Number
+        schema:
+          type: number
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      links:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            category:
+                              type: string
+                              description: The type of linked information found, e.g.
+                                Price Paid, EPC or Portal Listing.
+                            source:
+                              type: string
+                              description: The source for the linked information found,
+                                e.g. Land Registry, DLUHC, Zoopla, etc.
+                            link:
+                              type: string
+                              description: Either a link identifier or a link URL
+                                to the source.
+                            link_type:
+                              type: string
+                              description: The type of link, either ID or URL.
+                  uprn:
+                    type: number
+                    description: The uprn parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  uprn:
+                    type: number
+                    description: The uprn parameter provided
+          description: An error response
+      tags:
+      - api
+  /api/prospector/{version}/flood-risk/:
+    get:
+      operationId: listFloodRiskAreas
+      description: Lookup the distance and risk level for the closest flood risk zone,
+        up to 1km away.
+      parameters:
+      - name: version
+        in: path
+        required: true
+        description: The version of the API to use
+        schema:
+          type: string
+          example: v1
+      - name: postcode
+        in: query
+        required: false
+        description: A valid UK postcode
+        schema:
+          type: string
+      - name: lat
+        in: query
+        required: false
+        description: The latitude of a coordinate pair
+        schema:
+          type: number
+      - name: long
+        in: query
+        required: false
+        description: The longitude of a coordinate pair
+        schema:
+          type: number
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum:
+                    - success
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  data:
+                    type: object
+                    properties:
+                      risk_status:
+                        type: string
+                        description: Either found or not_found depending on whether
+                          a flood risk zone was found.
+                      flood_risk:
+                        type: string
+                        description: 'If a flood risk zone was found then the risk
+                          level, for example: Low, High.'
+                      distance_to_risk:
+                        type: number
+                        description: If a flood risk zone was found then the distance
+                          in km from the provided location parameter to the flood
+                          risk zone.
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+          description: A successful response
+        default:
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errors:
+                    type: array
+                    description: An array of error messages
+                    items:
+                      type: string
+                  status:
+                    type: string
+                    enum:
+                    - error
+                  response_time:
+                    type: number
+                    description: Time in ms to obtain a response
+                  postcode:
+                    type: string
+                    description: The postcode parameter provided
+                  lat:
+                    type: number
+                    description: The lat parameter provided
+                  long:
+                    type: number
+                    description: The long parameter provided
+          description: An error response
+      tags:
+      - api
+components:
+  securitySchemes:
+    HeaderToken:
+      type: apiKey
+      name: Authorization
+      in: header
+      description: API access token, e.g. 'Token ABCDEF12345'
+    QueryToken:
+      type: apiKey
+      name: token
+      in: query
+      description: API access token, e.g. 'ABCDEF12345'
+security:
+- HeaderToken: []
+- QueryToken: []

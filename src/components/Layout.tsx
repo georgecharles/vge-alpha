@@ -14,10 +14,12 @@ export function Layout({ children }: LayoutProps) {
   const [authMode, setAuthMode] = React.useState<"signin" | "signup">("signin");
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gray-50">
       <Header isAuthenticated={!!user} userProfile={profile || undefined} />
 
-      {children}
+      <div className="flex-1">
+        {children}
+      </div>
 
       <Footer />
 

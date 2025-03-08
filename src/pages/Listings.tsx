@@ -124,46 +124,131 @@ export default function Listings() {
     }
   };
 
-  // Function to get a property image from UPRN or address
+  // Function to get a property image from various potential sources
   const getPropertyImageUrl = (property: any): string | null => {
-    // Check if we should even attempt to use PropertyData API
-    // Based on our experience, this API might not be available or require additional configuration
-    const USE_PROPERTY_DATA_API = false; // Set to false to disable API calls and reduce error noise
+    // Check if we already have a direct image URL from the API
+    if (property.image_url && typeof property.image_url === 'string' && property.image_url.trim() !== '') {
+      console.log('Using direct image URL from API');
+      return property.image_url;
+    }
     
-    if (USE_PROPERTY_DATA_API) {
-      // Get the Patma API key from environment variables
-      const patmaApiKey = import.meta.env.VITE_PATMA_API_KEY;
-      
-      // Check if we have a UPRN - this is a unique property identifier
-      if (property.uprn && patmaApiKey) {
-        const uprn = property.uprn;
-        console.log(`Attempting to fetch image for UPRN: ${uprn} (this may not be available)`);
-        return `https://api.propertydata.app/v1/property-image?uprn=${uprn}&key=${patmaApiKey}`;
-      }
-      
-      // Try address-based lookup
-      if (property.address && property.postcode && patmaApiKey) {
-        const cleanAddress = encodeURIComponent(property.address);
-        const cleanPostcode = encodeURIComponent(property.postcode);
-        console.log(`Attempting to fetch image for address: ${property.address} (this may not be available)`);
-        return `https://api.propertydata.app/v1/property-image?address=${cleanAddress}&postcode=${cleanPostcode}&key=${patmaApiKey}`;
+    // Check for image URLs in common property fields
+    const possibleImageFields = [
+      'main_image', 
+      'photo_url', 
+      'thumbnail',
+      'image'
+    ];
+    
+    for (const field of possibleImageFields) {
+      if (property[field] && typeof property[field] === 'string' && property[field].trim() !== '') {
+        console.log(`Found image in property.${field}`);
+        return property[field];
       }
     }
     
-    // Direct lookup to listing sites if we have the IDs
-    if (property.rightmove_id) {
-      // Note: This would require proper rights/access from Rightmove
-      return null;
+    // Look for property-software.uk URLs in any string field
+    // This approach scans all string properties for PaTMa image URLs
+    for (const key in property) {
+      if (typeof property[key] === 'string' && 
+          property[key].includes('property-software.uk') && 
+          (property[key].endsWith('.jpg') || property[key].endsWith('.jpeg') || property[key].endsWith('.png'))) {
+        console.log(`Found PaTMa image URL in property.${key}`);
+        return property[key];
+      }
     }
     
-    if (property.zoopla_id) {
-      // Note: This would require proper rights/access from Zoopla
-      return null;
+    // Check if we have images/photos arrays
+    if (property.images && Array.isArray(property.images) && property.images.length > 0) {
+      // Try to find a property-software.uk URL first
+      const patmaImage = property.images.find((img: any) => 
+        typeof img === 'string' && img.includes('property-software.uk')
+      );
+      
+      if (patmaImage) {
+        console.log('Found PaTMa image URL in images array');
+        return patmaImage;
+      }
+      
+      // Fallback to the first image
+      if (typeof property.images[0] === 'string') {
+        console.log('Using first image from images array');
+        return property.images[0];
+      }
+      
+      // Check if images contain objects with URLs
+      if (property.images[0] && typeof property.images[0] === 'object' && property.images[0].url) {
+        console.log('Using URL from first image object in images array');
+        return property.images[0].url;
+      }
     }
     
-    // Alternative approach: check for property images directly in the API response
-    // This is already handled in the property processing logic
+    // Same check for photos array
+    if (property.photos && Array.isArray(property.photos) && property.photos.length > 0) {
+      const patmaPhoto = property.photos.find((img: any) => 
+        typeof img === 'string' && img.includes('property-software.uk')
+      );
+      
+      if (patmaPhoto) {
+        console.log('Found PaTMa image URL in photos array');
+        return patmaPhoto;
+      }
+      
+      if (typeof property.photos[0] === 'string') {
+        console.log('Using first image from photos array');
+        return property.photos[0];
+      }
+      
+      if (property.photos[0] && typeof property.photos[0] === 'object' && property.photos[0].url) {
+        console.log('Using URL from first image object in photos array');
+        return property.photos[0].url;
+      }
+    }
     
+    // Check sold_history for images
+    if (property.sold_history && Array.isArray(property.sold_history) && property.sold_history.length > 0) {
+      for (const historyItem of property.sold_history) {
+        if (!historyItem) continue;
+        
+        // Check for direct image fields in history item
+        for (const field of possibleImageFields) {
+          if (historyItem[field] && typeof historyItem[field] === 'string' && historyItem[field].trim() !== '') {
+            console.log(`Found image in sold_history item.${field}`);
+            return historyItem[field];
+          }
+        }
+        
+        // Check for property-software.uk URLs in any string field
+        for (const key in historyItem) {
+          if (typeof historyItem[key] === 'string' && 
+              historyItem[key].includes('property-software.uk') && 
+              (historyItem[key].endsWith('.jpg') || historyItem[key].endsWith('.jpeg') || historyItem[key].endsWith('.png'))) {
+            console.log(`Found PaTMa image URL in sold_history item.${key}`);
+            return historyItem[key];
+          }
+        }
+        
+        // Check arrays in history item
+        if (historyItem.images && Array.isArray(historyItem.images) && historyItem.images.length > 0) {
+          const patmaImage = historyItem.images.find((img: any) => 
+            typeof img === 'string' && img.includes('property-software.uk')
+          );
+          
+          if (patmaImage) {
+            console.log('Found PaTMa image URL in sold_history images array');
+            return patmaImage;
+          }
+          
+          if (typeof historyItem.images[0] === 'string') {
+            console.log('Using first image from sold_history images array');
+            return historyItem.images[0];
+          }
+        }
+      }
+    }
+    
+    // If no image was found, return null
+    console.log('No image found for property');
     return null;
   };
 
@@ -238,11 +323,9 @@ export default function Listings() {
             // Deep copy to avoid mutation issues
             let normalizedProperty = JSON.parse(JSON.stringify(property));
             
-            // Ensure UPRN is available and in a consistent format
+            // Ensure property ID is available in a consistent format
             if (property.uprn) {
-              // Make sure UPRN is a string to avoid any type issues
               normalizedProperty.uprn = String(property.uprn);
-              console.log(`Property ${index} has UPRN: ${normalizedProperty.uprn}`);
             }
             
             // PRICE HANDLING - use last_sold_price when available
@@ -250,81 +333,9 @@ export default function Listings() {
               normalizedProperty.price = property.last_sold_price;
             }
             
-            // IMPROVED IMAGE HANDLING STRATEGY
-            
-            // 1. Start with a comprehensive check of all possible image sources in the API response
-            const possibleImageSources = [
-              normalizedProperty.image_url,
-              normalizedProperty.main_image,
-              normalizedProperty.thumbnail,
-              normalizedProperty.photo_url,
-              normalizedProperty.rightmove_image,
-              normalizedProperty.zoopla_image,
-              normalizedProperty.onthemarket_image,
-              // Check arrays of images
-              normalizedProperty.images && normalizedProperty.images.length > 0 ? normalizedProperty.images[0] : null,
-              normalizedProperty.all_images && normalizedProperty.all_images.length > 0 ? normalizedProperty.all_images[0] : null,
-              normalizedProperty.photos && normalizedProperty.photos.length > 0 ? normalizedProperty.photos[0] : null
-            ].filter(Boolean); // Remove null/undefined entries
-            
-            if (possibleImageSources.length > 0) {
-              // Use the first valid image we found
-              normalizedProperty.image_url = possibleImageSources[0];
-              console.log(`Found image from property data for property ${normalizedProperty.uprn || index}`);
-            }
-            
-            // 2. Look for images in sold_history if we still don't have one
-            if (!normalizedProperty.image_url && property.sold_history && property.sold_history.length > 0) {
-              // Sometimes the sold history entries contain more data than the main property record
-              for (const entry of property.sold_history) {
-                // Check if sold history has a UPRN we can use if the property doesn't have one
-                if (!normalizedProperty.uprn && entry.uprn) {
-                  normalizedProperty.uprn = String(entry.uprn);
-                  console.log(`Found UPRN in sold history: ${normalizedProperty.uprn}`);
-                }
-                
-                const historyImageSources = [
-                  entry.image_url,
-                  entry.main_image,
-                  entry.thumbnail,
-                  entry.photo_url,
-                  // Check arrays
-                  entry.images && entry.images.length > 0 ? entry.images[0] : null,
-                  entry.photos && entry.photos.length > 0 ? entry.photos[0] : null
-                ].filter(Boolean);
-                
-                if (historyImageSources.length > 0) {
-                  normalizedProperty.image_url = historyImageSources[0];
-                  console.log(`Found image in sold history for property ${normalizedProperty.uprn || index}`);
-                  break;
-                }
-              }
-            }
-            
-            // Prepare the property type for the fallback image (whether or not we have an image URL)
-            const type = (normalizedProperty.property_type || '').toLowerCase();
-            let category = 'house';
-            
-            if (type.includes('flat') || type.includes('apartment')) {
-              category = 'flat';
-            } else if (type.includes('terraced') || type.includes('terrace')) {
-              category = 'terraced';
-            } else if (type.includes('semi')) {
-              category = 'semi';
-            } else if (type.includes('detached')) {
-              category = 'detached';
-            } else if (type.includes('bungalow')) {
-              category = 'bungalow';
-            }
-            
-            // Store the category for later use in the render function
-            normalizedProperty._fallback_category = category;
-            
-            if (!normalizedProperty.image_url) {
-              // Just a note - don't display an error message since this is expected
-              console.log(`No API image available for property ${normalizedProperty.uprn || index}, will use Unsplash fallback with UPRN: ${normalizedProperty.uprn || 'Not available'}`);
-            }
-            
+            // Find the best image URL for this property
+            normalizedProperty.image_url = getPropertyImageUrl(property);
+                        
             // Ensure property_type is always set
             if (!normalizedProperty.property_type && property.built_form) {
               normalizedProperty.property_type = property.built_form;
@@ -417,33 +428,8 @@ export default function Listings() {
               }
             }
 
-            // IMAGE HANDLING
-            // Check all possible image field locations
-            if (!normalizedProperty.image_url && (!normalizedProperty.images || !normalizedProperty.images.length)) {
-              // Try Patma-specific image fields first
-              if (property.thumbnail) {
-                normalizedProperty.image_url = property.thumbnail;
-              } else if (property.main_image) {
-                normalizedProperty.image_url = property.main_image;
-              } else if (property.photo_url) {
-                normalizedProperty.image_url = property.photo_url;
-              }
-              // Standard fields
-              else if (property.details?.images && property.details.images.length > 0) {
-                normalizedProperty.images = property.details.images;
-              } else if (property.photos && property.photos.length > 0) {
-                normalizedProperty.images = property.photos;
-              } else if (property.main_photo) {
-                normalizedProperty.image_url = property.main_photo;
-              } else if (property.image) {
-                normalizedProperty.image_url = property.image;
-              }
-              
-              // Check for nested image objects with URLs
-              if (property.image && typeof property.image === 'object' && property.image.url) {
-                normalizedProperty.image_url = property.image.url;
-              }
-            }
+            // IMAGE HANDLING - Use the same image getter for sold properties
+            normalizedProperty.image_url = getPropertyImageUrl(property);
             
             return normalizedProperty;
           });
@@ -703,44 +689,13 @@ export default function Listings() {
     const isSoldProperty = 'date_of_transfer' in selectedProperty;
     const isListedProperty = !isSoldProperty;
     
-    // Get the property image URL
-    const imageUrl = selectedProperty.image_url || 
-        (selectedProperty.images && selectedProperty.images.length > 0 ? selectedProperty.images[0] : null) ||
-        (selectedProperty.all_images && selectedProperty.all_images.length > 0 ? selectedProperty.all_images[0] : null);
-            
-    // Generate a fallback URL using Unsplash if needed
-    const propertyId = selectedProperty.uprn || 
-                       (selectedProperty.address ? selectedProperty.address.replace(/\D/g, '') : '') || 
-                       (selectedProperty.postcode ? selectedProperty.postcode.replace(/\s/g, '') : '') || 
-                       0;
-                        
-    const type = (selectedProperty.property_type || 'house').toLowerCase();
-    let category = (selectedProperty as any)._fallback_category || 'house';
-    
-    if (!category) {
-      if (type.includes('flat') || type.includes('apartment')) {
-        category = 'flat';
-      } else if (type.includes('terraced') || type.includes('terrace')) {
-        category = 'terraced';
-      } else if (type.includes('semi')) {
-        category = 'semi';
-      } else if (type.includes('detached')) {
-        category = 'detached';
-      } else if (type.includes('bungalow')) {
-        category = 'bungalow';
-      }
-    }
-    
-    const unsplashFallbackUrl = selectedProperty.uprn 
-      ? `https://source.unsplash.com/collection/1118894/800x600?property=${category}&sig=${selectedProperty.uprn}`
-      : `https://source.unsplash.com/collection/1118894/800x600?property=${category}&sig=${propertyId}`;
-      
-    const displayImageUrl = imageUrl || unsplashFallbackUrl;
+    // Just use the image URL from the property, no fallbacks
+    const imageUrl = selectedProperty.image_url;
     
     // Format postcode with fallback
     const displayPostcode = selectedProperty.postcode || 
-                           (selectedProperty.address && selectedProperty.address.match(/[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}/i)?.[0]) || 
-                           "Not Available";
+                          (selectedProperty.address && selectedProperty.address.match(/[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}/i)?.[0]) || 
+                          "Not Available";
     
     // Extract sale history data for chart
     const hasSaleHistory = selectedProperty.sold_history && selectedProperty.sold_history.length > 0;
@@ -797,16 +752,20 @@ export default function Listings() {
           
           <div className="flex flex-col md:flex-row h-full overflow-hidden">
             {/* Property image(s) */}
-            <div className="w-full md:w-2/5 h-64 md:h-auto relative">
-              <img 
-                src={displayImageUrl}
-                alt={selectedProperty.address || "Property"}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = unsplashFallbackUrl;
-                }}
-              />
+            <div className="w-full md:w-2/5 h-64 md:h-auto relative bg-gray-100">
+              {imageUrl ? (
+                <img 
+                  src={imageUrl}
+                  alt={selectedProperty.address || "Property"}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Home className="h-16 w-16 text-gray-300" />
+                  <p className="text-gray-400 text-sm mt-2">No image available</p>
+                </div>
+              )}
+              
               {/* Property type badge */}
               <div className="absolute top-4 left-4">
                 <span className="bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium">
@@ -1492,81 +1451,19 @@ export default function Listings() {
                   {viewMode === 'listed' ? (
                     <>
                       <div className="aspect-video relative bg-gray-100">
-                        {(() => {
-                          // Display direct image if we have one
-                          const imageUrl = property.image_url || 
-                              (property.images && property.images.length > 0 ? property.images[0] : null) ||
-                              (property.all_images && property.all_images.length > 0 ? property.all_images[0] : null);
-                          
-                          // Generate a unique but consistent ID for this property - prioritize UPRN
-                          const propertyId = property.uprn || 
-                                             (property.address ? property.address.replace(/\D/g, '') : '') || 
-                                             (property.postcode ? property.postcode.replace(/\s/g, '') : '') || 
-                                             index;
-                                              
-                          // Get property category for Unsplash image
-                          const type = (property.property_type || 'house').toLowerCase();
-                          let category = property._fallback_category || 'house';
-                          
-                          if (!category) {
-                            if (type.includes('flat') || type.includes('apartment')) {
-                              category = 'flat';
-                            } else if (type.includes('terraced') || type.includes('terrace')) {
-                              category = 'terraced';
-                            } else if (type.includes('semi')) {
-                              category = 'semi';
-                            } else if (type.includes('detached')) {
-                              category = 'detached';
-                            } else if (type.includes('bungalow')) {
-                              category = 'bungalow';
-                            }
-                          }
-                          
-                          // Create a reliable fallback URL using Unsplash with UPRN as the key parameter when available
-                          // Use the collection of real estate properties (1118894) for more relevant property images
-                          const createUnsplashFallbackUrl = () => {
-                            // If we have a UPRN, use it directly in the URL
-                            if (property.uprn) {
-                              return `https://source.unsplash.com/collection/1118894/800x600?property=${category}&sig=${property.uprn}`;
-                            }
-                            
-                            // Otherwise fallback to our composite ID
-                            return `https://source.unsplash.com/collection/1118894/800x600?property=${category}&sig=${propertyId}`;
-                          };
-                          
-                          // Fallback URL ready to use when needed
-                          const unsplashFallbackUrl = createUnsplashFallbackUrl();
-                          
-                          // If we have an image URL, try to use it with fallback
-                          if (imageUrl) {
-                            return (
-                              <img
-                                src={imageUrl}
-                                alt={property.address || "Property"}
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                                onError={(e) => {
-                                  e.currentTarget.onerror = null; // Prevent infinite error loops
-                                  
-                                  // Switch to our fallback
-                                  console.log(`Using Unsplash fallback for property ${property.uprn || index}`);
-                                  e.currentTarget.src = unsplashFallbackUrl;
-                                }}
-                              />
-                            );
-                          } 
-                          
-                          // If we don't have any image, use Unsplash directly as source
-                          console.log(`No image available for property ${property.uprn || index}, using Unsplash directly`);
-                          return (
-                            <img
-                              src={unsplashFallbackUrl}
-                              alt={property.address || "Property"}
-                              className="w-full h-full object-cover"
-                              loading="lazy"
-                            />
-                          );
-                        })()}
+                        {property.image_url ? (
+                          <img
+                            src={property.image_url}
+                            alt={property.address || "Property"}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex flex-col items-center justify-center">
+                            <Home className="h-12 w-12 text-gray-300" />
+                            <p className="text-gray-400 text-sm mt-2">No image available</p>
+                          </div>
+                        )}
                         <div className="absolute top-2 right-2 flex gap-2">
                           <span className="bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium">
                             {property.property_type}

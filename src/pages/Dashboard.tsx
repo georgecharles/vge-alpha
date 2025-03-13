@@ -1,4 +1,5 @@
 import { PropertyImporter } from '../components/PropertyImporter';
+import { PropertyCard } from "../components/PropertyCard";
 
 export default function Dashboard() {
   return (

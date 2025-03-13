@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "./ui/dropdown-menu";
+import { LoginModal } from './auth/LoginModal';
 
 interface HeaderProps {
   isAuthenticated?: boolean;
@@ -109,11 +110,18 @@ export default function Header({
   onSignIn,
   onSignUp,
   userProfile = {},
+  onSignOut
 }: HeaderProps) {
   const [showMobileMenu, setShowMobileMenu] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [loginModalOpen, setLoginModalOpen] = React.useState(false);
   const navigate = useNavigate();
-  const { signOut, isLoading } = useAuth();
+  const auth = useAuth();
+  
+  // Prioritize props but fallback to global auth context if not provided
+  const actualIsAuthenticated = isAuthenticated || !!auth.user;
+  const actualUserProfile = userProfile && Object.keys(userProfile).length > 0 ? userProfile : auth.profile;
+  const actualSignOut = onSignOut || auth.signOut;
 
   // Add scroll listener
   React.useEffect(() => {
@@ -124,11 +132,19 @@ export default function Header({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
+  // Handle login click
+  const handleLoginClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setLoginModalOpen(true);
+  };
+
+  // Handle sign out with proper page refresh
   const handleSignOut = async () => {
     console.log("Sign out button clicked");
     try {
-      await signOut();
-      navigate("/");
+      await actualSignOut();
+      // Force page reload to ensure auth state is completely reset
+      window.location.href = "/";
     } catch (error) {
       console.error("Error signing out:", error);
     }
@@ -161,10 +177,6 @@ export default function Header({
     );
   });
   ListItem.displayName = "ListItem";
-
-  if (isLoading) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <>
@@ -207,7 +219,7 @@ export default function Header({
                     </NavigationMenuTrigger>
                     <NavigationMenuContent>
                         <ul className="w-[400px] gap-3 p-4 rounded-2xl">
-                          {isAuthenticated ? (
+                          {actualIsAuthenticated ? (
                             <>
                         <ListItem href="/trends" title="Market Trends">
                           Stay updated with the latest real estate market trends.
@@ -220,20 +232,14 @@ export default function Header({
                             <>
                               <ListItem 
                                 href="#" 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  onSignIn?.();
-                                }} 
+                                onClick={handleLoginClick} 
                                 title="Market Trends"
                               >
                                 Sign in to access market trends.
                               </ListItem>
                               <ListItem 
                                 href="#" 
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  onSignIn?.();
-                                }} 
+                                onClick={handleLoginClick} 
                                 title="Market Insights"
                               >
                                 Sign in to access market insights.
@@ -354,11 +360,11 @@ export default function Header({
                 </Button>
 
                 {/* Auth Buttons or User Menu */}
-                {!isAuthenticated ? (
+                {!actualIsAuthenticated ? (
                   <div className="hidden md:flex items-center gap-2">
                     <Button 
                       variant="ghost" 
-                      onClick={() => onSignIn?.()} 
+                      onClick={handleLoginClick} 
                       className="rounded-full hover:bg-gray-100"
                     >
                       <LogIn className="mr-2 h-4 w-4" />
@@ -381,11 +387,11 @@ export default function Header({
                       >
                         <Avatar className="h-10 w-10">
                           <AvatarImage
-                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.full_name || "")}&background=random`}
-                            alt={userProfile?.full_name || "User avatar"}
+                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(actualUserProfile?.full_name || "")}&background=random`}
+                            alt={actualUserProfile?.full_name || "User avatar"}
                           />
                           <AvatarFallback className="bg-primary/10">
-                            {userProfile?.full_name
+                            {actualUserProfile?.full_name
                               ?.split(" ")
                               .filter(Boolean)
                               .map((n) => n[0])
@@ -403,10 +409,10 @@ export default function Header({
                     >
                       <DropdownMenuItem className="flex-col items-start">
                         <div className="font-medium">
-                          {userProfile?.full_name}
+                          {actualUserProfile?.full_name}
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {userProfile?.email}
+                          {actualUserProfile?.email}
                         </div>
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
@@ -445,16 +451,16 @@ export default function Header({
         onClose={() => setShowMobileMenu(false)}
       >
         <nav className="space-y-6">
-          {isAuthenticated && (
+          {actualIsAuthenticated && (
             <div className="space-y-4 mb-6">
               <div className="flex items-center space-x-3 px-2">
                 <Avatar className="h-10 w-10">
                   <AvatarImage
-                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(userProfile?.full_name || "")}&background=random`}
-                    alt={userProfile?.full_name || "User avatar"}
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(actualUserProfile?.full_name || "")}&background=random`}
+                    alt={actualUserProfile?.full_name || "User avatar"}
                   />
                   <AvatarFallback className="bg-primary/10">
-                    {userProfile?.full_name
+                    {actualUserProfile?.full_name
                       ?.split(" ")
                       .filter(Boolean)
                       .map((n) => n[0])
@@ -465,10 +471,10 @@ export default function Header({
                 </Avatar>
                 <div className="flex-1 overflow-hidden">
                   <p className="text-sm font-medium leading-none truncate">
-                    {userProfile?.full_name}
+                    {actualUserProfile?.full_name}
                   </p>
                   <p className="text-sm text-muted-foreground truncate">
-                    {userProfile?.email}
+                    {actualUserProfile?.email}
                   </p>
                 </div>
               </div>
@@ -504,15 +510,9 @@ export default function Header({
             <div key={index} className="space-y-3">
               {item.href ? (
                 <a
-                  href={(!item.requiresAuth || isAuthenticated) ? item.href : "#"}
+                  href={(!item.requiresAuth || actualIsAuthenticated) ? item.href : "#"}
                   className="flex items-center space-x-3 text-lg font-medium hover:text-primary transition-colors"
-                  onClick={(e) => {
-                    if (item.requiresAuth && !isAuthenticated) {
-                      e.preventDefault();
-                      onSignIn?.();
-                    }
-                    setShowMobileMenu(false);
-                  }}
+                  onClick={handleLoginClick}
                 >
                   <span className="text-xl">{item.icon}</span>
                   <span>{item.title}</span>
@@ -529,16 +529,10 @@ export default function Header({
                         key={subIndex}
                         href={subItem.href}
                         className="block text-base text-muted-foreground hover:text-primary transition-colors"
-                        onClick={(e) => {
-                          if (subItem.requiresAuth && !isAuthenticated) {
-                            e.preventDefault();
-                            onSignIn?.();
-                          }
-                          setShowMobileMenu(false);
-                        }}
+                        onClick={handleLoginClick}
                       >
                         {subItem.title}
-                        {subItem.requiresAuth && !isAuthenticated && (
+                        {subItem.requiresAuth && !actualIsAuthenticated && (
                           <span className="ml-2 text-xs text-muted-foreground">(Sign in required)</span>
                         )}
                       </a>
@@ -549,15 +543,12 @@ export default function Header({
             </div>
           ))}
 
-          {!isAuthenticated ? (
+          {!actualIsAuthenticated ? (
             <div className="space-y-4 pt-6">
               <Button
                 variant="outline"
                 className="w-full justify-center rounded-full"
-                onClick={() => {
-                  onSignIn?.();
-                  setShowMobileMenu(false);
-                }}
+                onClick={handleLoginClick}
               >
                 <LogIn className="mr-2 h-4 w-4" />
                 Sign In
@@ -578,10 +569,7 @@ export default function Header({
               <Button
                 variant="outline"
                 className="w-full justify-center rounded-full text-red-500 hover:text-red-600 hover:bg-red-50"
-                onClick={() => {
-                  handleSignOut();
-                  setShowMobileMenu(false);
-                }}
+                onClick={handleSignOut}
               >
                 <LogOut className="mr-2 h-4 w-4" />
                 Log Out
@@ -590,6 +578,16 @@ export default function Header({
           )}
         </nav>
       </MobileNav>
+
+      <LoginModal 
+        isOpen={loginModalOpen}
+        onClose={() => setLoginModalOpen(false)}
+        onSuccess={() => {
+          setLoginModalOpen(false);
+          // Force a reload for the header to recognize the auth state
+          window.location.reload();
+        }}
+      />
     </>
   );
 }

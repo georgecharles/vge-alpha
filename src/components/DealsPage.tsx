@@ -16,7 +16,47 @@ interface DealsPageProps {
   onSignUp?: () => void;
 }
 
+// Auth context checker wrapper
+const AuthContextChecker = ({ children }: { children: React.ReactNode }) => {
+  try {
+    // Try to access auth context but don't use the result
+    useAuth();
+    // If we get here, auth context is available
+    return <>{children}</>;
+  } catch (error) {
+    // If auth context is not available, show a fallback
+    return (
+      <Layout>
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+          <Card className="p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4 text-center">Authentication Error</h2>
+            <p className="text-muted-foreground mb-6 text-center">
+              Unable to load authentication. Please refresh the page or try again later.
+            </p>
+            <Button 
+              className="w-full" 
+              onClick={() => window.location.reload()}
+            >
+              Refresh Page
+            </Button>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+};
+
 export default function DealsPage({ onSignIn, onSignUp }: DealsPageProps) {
+  // Wrap the component content in the auth checker
+  return (
+    <AuthContextChecker>
+      <DealsPageContent onSignIn={onSignIn} onSignUp={onSignUp} />
+    </AuthContextChecker>
+  );
+}
+
+// Separate the main component content to ensure useAuth is only called when context is available
+function DealsPageContent({ onSignIn, onSignUp }: DealsPageProps) {
   const { user, profile, isLoading } = useAuth();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -110,6 +150,7 @@ export default function DealsPage({ onSignIn, onSignUp }: DealsPageProps) {
                       deal={deal}
                       isSubscriber={false}
                       onClick={onSignIn}
+                      user={null}
                     />
                   ))}
                 </div>
@@ -123,6 +164,7 @@ export default function DealsPage({ onSignIn, onSignUp }: DealsPageProps) {
                     deal={deal}
                     isSubscriber={profile?.subscription_tier !== 'free'}
                     onClick={() => setSelectedDeal(deal)}
+                    user={user}
                   />
                 ))}
               </div>

@@ -1,8 +1,7 @@
 import React from "react";
 import Header from "./Header";
 import HeroSection from "./HeroSection";
-import PropertyCard from "./PropertyCard";
-import MarketTrends from "./MarketTrends";
+import { PropertyCard } from "./PropertyCard";
 import { AuthModal } from "./AuthModal";
 import { SubscriptionModal } from "./SubscriptionModal";
 import { MessagesModal } from "./MessagesModal";
@@ -280,6 +279,8 @@ const Home = () => {
                       description={property.description || ''}
                       createdAt={property.created_at || new Date().toISOString()}
                       images={property.image_url ? [property.image_url] : []}
+                      currentUser={user}
+                      userProfile={profile}
                     />
                   </div>
                 ))
@@ -308,8 +309,6 @@ const Home = () => {
           </div>
         </div>
 
-        <MarketTrends />
-
         {/* Investment Deals Section */}
         <div className="w-full bg-background py-8">
           <div className="max-w-[1200px] mx-auto px-4 sm:px-8">
@@ -319,23 +318,31 @@ const Home = () => {
                 Array(3).fill(0).map((_, i) => (
                   <div key={i} className="w-full h-[420px] bg-muted rounded-lg animate-pulse" />
                 ))
-              ) : dealsData?.pages[0].map((deal) => (
-                <PropertyCard
-                  key={deal.id}
-                  id={deal.id}
-                  address={deal.location}
-                  price={deal.price}
-                  description={deal.description}
-                  propertyType={deal.property_type}
-                  createdAt={deal.created_at}
-                  images={[deal.image_url]}
-                  isDeal={true}
-                  roi_percentage={deal.roi_percentage}
-                  investment_term={deal.investment_term}
-                  deal_type={deal.deal_type}
-                  isPremium={true}
-                />
-              ))}
+              ) : dealsData?.pages?.[0] && Array.isArray(dealsData.pages[0]) ? (
+                dealsData.pages[0].map((deal: any) => (
+                  <PropertyCard
+                    key={deal.id}
+                    id={deal.id}
+                    address={deal.location}
+                    price={deal.price}
+                    description={deal.description}
+                    propertyType={deal.property_type}
+                    createdAt={deal.created_at}
+                    images={[deal.image_url]}
+                    isDeal={true}
+                    roi_percentage={deal.roi_percentage}
+                    investment_term={deal.investment_term}
+                    deal_type={deal.deal_type}
+                    isPremium={true}
+                    currentUser={user}
+                    userProfile={profile}
+                  />
+                ))
+              ) : (
+                <div className="col-span-3 text-center py-8 text-muted-foreground">
+                  No investment deals available
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -441,18 +448,27 @@ const Home = () => {
       <SubscriptionModal
         isOpen={isSubscriptionModalOpen}
         onClose={() => setIsSubscriptionModalOpen(false)}
+        currentUser={user}
+        userProfile={profile}
       />
 
       <MessagesModal
         isOpen={isMessagesModalOpen}
         onClose={() => setIsMessagesModalOpen(false)}
         receiverId={selectedReceiverId}
+        currentUser={user}
+        userProfile={profile}
       />
 
       <PropertyModal
         isOpen={isPropertyModalOpen}
-        onClose={() => setIsPropertyModalOpen(false)}
+        onClose={() => {
+          setIsPropertyModalOpen(false);
+          setTimeout(() => setSelectedProperty(null), 300);
+        }}
         property={selectedProperty}
+        currentUser={user}
+        userProfile={profile}
       />
     </div>
   );

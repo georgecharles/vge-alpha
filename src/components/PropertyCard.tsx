@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from "react";
-import { Card, CardContent } from "./ui/card";
+import React from "react";
+import { Card, CardContent, CardHeader } from "./ui/card";
+import { Badge } from "./ui/badge";
+import { formatCurrency, formatDate, formatNumber } from "../lib/utils";
 import { Button } from "./ui/button";
-import { MessageCircle, Lock } from "lucide-react";
-import { formatCurrency } from "../lib/utils";
-import { useBitcoinPrice } from '../hooks/useBitcoinPrice';
-import { useAuth } from '../lib/auth';
+import { Heart, MessageCircle, Share } from "lucide-react";
+import { UserProfile, User } from "../lib/auth";
 
 const PROPERTY_FALLBACK_IMAGES = [
   "https://images.unsplash.com/photo-1518780664697-55e3ad937233?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600",
@@ -23,189 +23,226 @@ const DEAL_FALLBACK_IMAGES = [
 
 interface PropertyCardProps {
   id?: string;
-  address?: string;
-  price?: number;
+  address: string;
+  price: number;
   squareFootage?: number;
   bedrooms?: number;
   bathrooms?: number;
   isPremium?: boolean;
-  assignedUser?: any;
-  author?: any;
-  type?: string;
-  status?: string;
+  description?: string;
+  propertyType?: string;
+  createdAt: string;
+  updatedAt?: string;
+  author?: {
+    id: string;
+    name: string;
+    avatar?: string;
+  };
+  original_price?: number;
   potential_profit?: number;
   roi_percentage?: number;
-  investment_term?: string;
+  deal_price?: number;
   deal_type?: string;
+  property?: any;
+  status?: string;
+  type?: "listing" | "deal";
+  isSubscriber?: boolean;
+  investment_term?: string;
+  onClick?: () => void;
+  onMessageAuthor?: (authorId: string) => void;
   isDeal?: boolean;
   images?: string[];
-  onMessageAuthor?: (authorId: string) => void;
-  onClick?: () => void;
-  description: string;
-  propertyType: string;
-  createdAt: string;
+  currentUser?: User | null;
+  userProfile?: UserProfile | null;
 }
 
-const PropertyCard = ({
-  id = '',
-  address = 'Location not available',
-  price = 0,
-  squareFootage = 0,
-  bedrooms = 0,
-  bathrooms = 0,
+export function PropertyCard({
+  id,
+  address,
+  price,
+  squareFootage,
+  bedrooms,
+  bathrooms,
   isPremium = false,
+  propertyType = "residential",
+  description,
+  createdAt,
   author,
-  type = "property",
-  potential_profit,
+  original_price,
   roi_percentage,
   investment_term,
   deal_type,
+  isSubscriber = false,
+  type = "listing",
   isDeal = false,
   images = [],
-  onMessageAuthor,
   onClick,
-  description = '',
-  propertyType = 'residential',
-  createdAt,
-}: PropertyCardProps) => {
-  const { profile } = useAuth();
-  const [isImageLoading, setIsImageLoading] = React.useState(true);
-  const { btcEquivalent, error: btcError, isLoading: isLoadingBtc } = useBitcoinPrice(price);
-
-  // Add debug logging
-  console.log('Profile in PropertyCard:', profile);
-  console.log('Subscription tier:', profile?.subscription_tier);
+  onMessageAuthor,
+  currentUser,
+  userProfile
+}: PropertyCardProps) {
+  const isAuthenticated = !!currentUser;
   
-  // More defensive check
-  const hasPremiumAccess = profile?.subscription_tier === 'premium' || false;
+  const [isSaved, setIsSaved] = React.useState(false);
 
-  const fallbackImage = React.useMemo(() => {
-    const fallbackImages =
-      type === "deal" ? DEAL_FALLBACK_IMAGES : PROPERTY_FALLBACK_IMAGES;
-    return fallbackImages[Math.floor(Math.random() * fallbackImages.length)];
-  }, [type]);
+  const handleSaveToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsSaved(!isSaved);
+  };
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    console.log("Share property:", id);
+  };
+
+  const handleMessageAuthor = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (author && onMessageAuthor) {
+      onMessageAuthor(author.id);
+    }
+  };
+
+  const imageUrl = images && images.length > 0 
+    ? images[0] 
+    : `https://source.unsplash.com/random/800x600?property,house&sig=${id}`;
 
   return (
-    <Card
-      className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+    <Card 
+      className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
       onClick={onClick}
     >
-      <div className="relative h-48 bg-muted">
-        {isImageLoading && (
-          <div className="absolute inset-0 animate-pulse bg-muted" />
-        )}
+      <div className="relative aspect-[4/3] overflow-hidden bg-muted">
         <img
-          src={
-            (images &&
-              Array.isArray(images) &&
-              images.length > 0 &&
-              images[0]) ||
-            fallbackImage
-          }
-          alt="Property"
-          className={`w-full h-full object-cover transition-opacity duration-200 ${isImageLoading ? "opacity-0" : "opacity-100"}`}
-          onLoad={() => setIsImageLoading(false)}
+          src={imageUrl}
+          alt={address}
+          className="object-cover w-full h-full"
+          loading="lazy"
         />
-        {isPremium && !hasPremiumAccess && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px] flex items-center justify-center">
-            <div className="text-center p-6">
-              <Lock className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-              <p className="text-sm text-muted-foreground">
-                Subscribe to view premium properties
-              </p>
-            </div>
+        {isPremium && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="secondary" className="bg-primary text-primary-foreground hover:bg-primary/90">
+              Featured
+            </Badge>
+          </div>
+        )}
+        {isDeal && (
+          <div className="absolute top-2 left-2">
+            <Badge variant="secondary" className="bg-emerald-500 text-white hover:bg-emerald-600">
+              Investment Deal
+            </Badge>
+          </div>
+        )}
+        {roi_percentage && (
+          <div className="absolute top-2 right-2">
+            <Badge className="bg-emerald-500 text-white">
+              {roi_percentage}% ROI
+            </Badge>
           </div>
         )}
       </div>
 
-      <CardContent className="p-4">
-        <div className="mb-4">
-          <h3 className="font-semibold mb-1 line-clamp-1">{address}</h3>
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold">
-              {formatCurrency(price)}
-              {btcEquivalent && !isLoadingBtc && !btcError && (
-                <span className="text-sm text-muted-foreground ml-2">
-                  ≈ {btcEquivalent.toFixed(2)} BTC
-                </span>
-              )}
-            </span>
-          </div>
+      <CardHeader className="p-4 pb-0">
+        <div className="flex justify-between items-start mb-2">
+          <h3 className="text-lg font-semibold">{formatCurrency(price)}</h3>
+          {original_price && (
+            <div className="text-sm text-muted-foreground line-through">
+              {formatCurrency(original_price)}
+            </div>
+          )}
         </div>
+        <p className="text-sm text-muted-foreground mb-2">{address}</p>
+      </CardHeader>
 
-        <div className="grid grid-cols-3 gap-4 mb-4 text-sm">
-          <div>
-            <span className="block text-muted-foreground">Beds</span>
-            <span className="font-medium">{bedrooms}</span>
-          </div>
-          <div>
-            <span className="block text-muted-foreground">Baths</span>
-            <span className="font-medium">{bathrooms}</span>
-          </div>
-          <div>
-            <span className="block text-muted-foreground">Sq Ft</span>
-            <span className="font-medium">{squareFootage}</span>
-          </div>
-        </div>
-
-        {isDeal && (
-          <div className="space-y-2 mb-4">
-            {roi_percentage && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">ROI:</span>
-                <span className="font-medium text-emerald-500">
-                  {roi_percentage}%
+      <CardContent className="p-4 pt-2">
+        {(bedrooms || bathrooms || squareFootage) && (
+          <div className="flex justify-between mb-3 text-sm">
+            {bedrooms !== undefined && (
+              <div>
+                <span className="font-medium">{bedrooms}</span>{" "}
+                <span className="text-muted-foreground">
+                  {bedrooms === 1 ? "Bed" : "Beds"}
                 </span>
               </div>
             )}
-            {investment_term && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Investment Term:</span>
-                <span className="font-medium">
-                  {investment_term}
+            {bathrooms !== undefined && (
+              <div>
+                <span className="font-medium">{bathrooms}</span>{" "}
+                <span className="text-muted-foreground">
+                  {bathrooms === 1 ? "Bath" : "Baths"}
                 </span>
               </div>
             )}
-            {deal_type && (
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Deal Type:</span>
-                <span className="font-medium">
-                  {deal_type}
-                </span>
+            {squareFootage !== undefined && (
+              <div>
+                <span className="font-medium">{formatNumber(squareFootage)}</span>{" "}
+                <span className="text-muted-foreground">sq ft</span>
               </div>
             )}
           </div>
         )}
 
-        <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span>{propertyType}</span>
-          <span>{bedrooms} beds</span>
-          <span>{bathrooms} baths</span>
-          <span>{squareFootage} sq ft</span>
-        </div>
-
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {description}
-        </p>
-
-        <p className="text-xs text-muted-foreground">
-          Listed {new Date(createdAt).toLocaleDateString()}
-        </p>
-
-        {author && onMessageAuthor && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full"
-            onClick={() => onMessageAuthor(author.id)}
-          >
-            <MessageCircle className="w-4 h-4 mr-2" />
-            Contact Agent
-          </Button>
+        {investment_term && (
+          <div className="mb-3">
+            <span className="text-sm text-muted-foreground">Investment Term: </span>
+            <span className="text-sm font-medium">{investment_term}</span>
+          </div>
         )}
+
+        {deal_type && (
+          <div className="mb-3">
+            <span className="text-sm text-muted-foreground">Deal Type: </span>
+            <span className="text-sm font-medium">{deal_type}</span>
+          </div>
+        )}
+
+        {description && (
+          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
+            {description}
+          </p>
+        )}
+
+        <div className="flex justify-between items-center mt-2">
+          <div className="text-xs text-muted-foreground">
+            {formatDate(createdAt)}
+          </div>
+          <div className="flex space-x-1">
+            {isAuthenticated && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={handleSaveToggle}
+                >
+                  <Heart
+                    className={`h-4 w-4 ${
+                      isSaved ? "fill-red-500 text-red-500" : ""
+                    }`}
+                  />
+                </Button>
+                {author && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={handleMessageAuthor}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                  </Button>
+                )}
+              </>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleShare}
+            >
+              <Share className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
-};
-
-export default PropertyCard;
+}

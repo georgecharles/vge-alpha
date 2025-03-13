@@ -9,18 +9,24 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
-  const { user, profile } = useAuth();
+  const { user, profile, signOut, isLoading } = useAuth();
   const [isAuthModalOpen, setIsAuthModalOpen] = React.useState(false);
   const [authMode, setAuthMode] = React.useState<"signin" | "signup">("signin");
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Header isAuthenticated={!!user} userProfile={profile || undefined} />
-
-      <div className="flex-1">
+    <div className="min-h-screen flex flex-col bg-background">
+      <Header
+        isAuthenticated={!!user}
+        userProfile={profile}
+        onSignIn={() => window.location.href = '/login'}
+        onSignUp={() => window.location.href = '/signup'}
+        onSignOut={signOut}
+      />
+      
+      <main className="flex-1">
         {children}
-      </div>
-
+      </main>
+      
       <Footer />
 
       <AuthModal

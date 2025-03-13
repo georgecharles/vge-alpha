@@ -10,12 +10,18 @@ import {
   getPredictiveAnalytics,
 } from "../lib/market-insights";
 import { cn } from "../lib/utils";
+import { Button } from "./ui/button";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import HeroSection from "./HeroSection";
 
 interface MarketInsightsProps {
+  user?: any;
+  profile?: any;
   className?: string;
+  showHero?: boolean;
 }
 
-export function MarketInsights({ className }: MarketInsightsProps) {
+export function MarketInsights({ user, profile, className, showHero = true }: MarketInsightsProps) {
   const [news, setNews] = React.useState<any[]>([]);
   const [insights, setInsights] = React.useState<string>("");
   const [riskAssessment, setRiskAssessment] = React.useState<string>("No risk assessment data available.");
@@ -64,106 +70,141 @@ export function MarketInsights({ className }: MarketInsightsProps) {
     loadData();
   }, []);
 
-  if (error) {
-    return (
-      <div className={cn("space-y-6", className)}>
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-destructive">
-              Failed to load market insights: {error}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Sample data for demonstration
+  const priceData = [
+    { month: 'Jan', price: 320000 },
+    { month: 'Feb', price: 325000 },
+    { month: 'Mar', price: 329000 },
+    { month: 'Apr', price: 335000 },
+    { month: 'May', price: 340000 },
+    { month: 'Jun', price: 345000 },
+  ];
 
-  if (loading) {
-    return (
-      <div className="space-y-4 animate-pulse">
-        <Card>
-          <CardContent className="h-40" />
-        </Card>
-      </div>
-    );
-  }
+  const regionalData = [
+    { region: 'London', price: 500000 },
+    { region: 'Manchester', price: 250000 },
+    { region: 'Birmingham', price: 220000 },
+    { region: 'Leeds', price: 200000 },
+    { region: 'Liverpool', price: 180000 },
+  ];
 
   return (
-    <div className="space-y-6 font-sans">
-      <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <TrendingUp className="w-5 h-5" />
-          <h3 className="font-semibold">Market Analysis</h3>
-        </CardHeader>
-        <CardContent>
-          <div className="prose dark:prose-invert max-w-none">{insights}</div>
-        </CardContent>
-      </Card>
+    <>
+      {/* Only render hero if showHero prop is true */}
+      {showHero && (
+        <div className="w-full">
+          <HeroSection
+            title="Property Market Insights & Analysis"
+            subtitle="Expert analysis, regional comparisons, and investment recommendations to guide your property decisions"
+            showSearch={false}
+            showStats={false}
+            height="h-[400px]"
+          />
+        </div>
+      )}
 
-      <Card>
-        <CardHeader className="flex flex-row items-center gap-2">
-          <Newspaper className="w-5 h-5" />
-          <h3 className="font-semibold">Latest Property News</h3>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {news.map((article, index) => (
-              <div
-                key={index}
-                className="border-b last:border-0 pb-4 last:pb-0"
-              >
-                <h4 className="font-medium mb-1">{article.title}</h4>
-                <p className="text-sm text-muted-foreground mb-2">
-                  {article.description}
-                </p>
-                <div className="flex justify-between items-center text-xs text-muted-foreground">
-                  <span>
-                    {new Date(article.publishedAt).toLocaleDateString()}
-                  </span>
-                  <a
-                    href={article.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    Read More
-                  </a>
-                </div>
-              </div>
-            ))}
+      {/* Content area */}
+      <div className={cn("w-full", className)}>
+        <div className="container mx-auto px-4 py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+            <Card>
+              <CardHeader>
+                <h2 className="text-xl font-semibold">Price Trends</h2>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={priceData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value) => [`£${value.toLocaleString()}`, 'Average Price']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="price" 
+                      stroke="hsl(var(--primary))"
+                      activeDot={{ r: 8 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <h2 className="text-xl font-semibold">Regional Comparison</h2>
+              </CardHeader>
+              <CardContent className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={regionalData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="region" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value) => [`£${value.toLocaleString()}`, 'Average Price']}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="price" 
+                      stroke="hsl(var(--primary))"
+                      activeDot={{ r: 8 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Risk Assessment Card */}
-      <Card>
-        <CardHeader>
-          <h3 className="font-semibold">Risk Assessment</h3>
-        </CardHeader>
-        <CardContent>
-          <p className="text-muted-foreground">{riskAssessment || "No data available."}</p>
-        </CardContent>
-      </Card>
+          <Card className="mb-12">
+            <CardHeader>
+              <h2 className="text-xl font-semibold">Market Analysis</h2>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                The UK property market continues to show resilience despite economic challenges.
+                Regional variations are significant, with some areas experiencing rapid growth
+                while others see more moderate changes.
+              </p>
+              <p className="text-muted-foreground mb-4">
+                Key factors influencing the current market include:
+              </p>
+              <ul className="list-disc pl-5 mb-4 text-muted-foreground">
+                <li>Interest rate changes affecting mortgage affordability</li>
+                <li>Supply constraints in high-demand areas</li>
+                <li>Increasing preference for properties with outdoor space</li>
+                <li>Remote work influencing location decisions</li>
+              </ul>
+              <Button>Download Full Report</Button>
+            </CardContent>
+          </Card>
 
-      {/* Personalized Investment Opportunities Card */}
-      <Card>
-        <CardHeader>
-          <h3 className="font-semibold">Personalized Investment Opportunities</h3>
-        </CardHeader>
-        <CardContent>
-          {personalizedOpportunities.length > 0 ? (
-            <ul className="space-y-2">
-              {personalizedOpportunities.map((opportunity, index) => (
-                <li key={index} className="text-muted-foreground">
-                  {opportunity.description}
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground">No personalized opportunities available.</p>
+          {/* Only show premium insights for premium subscribers */}
+          {profile?.subscription_tier !== 'free' && (
+            <Card className="mb-12 border-primary/20 bg-gradient-to-r from-primary/5 to-background">
+              <CardHeader>
+                <h2 className="text-xl font-semibold flex items-center">
+                  Premium Market Insights
+                  <span className="ml-2 px-2 py-1 text-xs rounded-full bg-primary/20 text-primary">
+                    Premium
+                  </span>
+                </h2>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground mb-4">
+                  Our exclusive analysis indicates emerging hotspots in the following areas:
+                </p>
+                <ul className="list-disc pl-5 mb-4 text-muted-foreground">
+                  <li>Northwest Manchester - projected 8.3% growth over 12 months</li>
+                  <li>East Birmingham suburbs - increasing demand from young professionals</li>
+                  <li>Coastal towns in the Southwest - rising popularity for remote workers</li>
+                </ul>
+                <Button>View Detailed Forecast</Button>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </div>
+    </>
   );
 }

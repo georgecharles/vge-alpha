@@ -8,9 +8,49 @@ import HeroSection from "./HeroSection";
 import { LoadingSpinner } from "./ui/loading-spinner";
 import { DealModal } from "./DealModal";
 import { Alert } from "./ui/alert";
+import { Card } from "./ui/card";
+import { Button } from "./ui/button";
+
+// Auth context checker wrapper
+const AuthContextChecker = ({ children }: { children: React.ReactNode }) => {
+  try {
+    // Try to access auth context but don't use the result
+    useAuth();
+    // If we get here, auth context is available
+    return <>{children}</>;
+  } catch (error) {
+    // If auth context is not available, show a fallback
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-background">
+        <Header />
+        <Card className="p-6 max-w-md w-full my-8">
+          <h2 className="text-xl font-bold mb-4 text-center">Authentication Error</h2>
+          <p className="text-muted-foreground mb-6 text-center">
+            Unable to load authentication. Please refresh the page or try again later.
+          </p>
+          <Button 
+            className="w-full" 
+            onClick={() => window.location.reload()}
+          >
+            Refresh Page
+          </Button>
+        </Card>
+        <Footer />
+      </div>
+    );
+  }
+};
 
 export const Deals = () => {
-  const { profile } = useAuth();
+  return (
+    <AuthContextChecker>
+      <DealsContent />
+    </AuthContextChecker>
+  );
+};
+
+const DealsContent = () => {
+  const { profile, user } = useAuth();
   const [deals, setDeals] = React.useState<Deal[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -176,6 +216,7 @@ export const Deals = () => {
                     <DealCard
                       deal={deal}
                       isSubscriber={profile?.subscription_tier !== "free"}
+                      user={user}
                     />
                   </div>
                 ))

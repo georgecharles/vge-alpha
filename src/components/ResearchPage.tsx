@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import HeroSection from "./HeroSection";
 import { useAuth } from "../lib/auth";
-import { ResearchReports } from "./ResearchReports";
+import ResearchReports from "./ResearchReports";
 import { PageTransition } from "./ui/page-transition";
 import { Button } from "./ui/button";
 import { SubscriptionModal } from "./SubscriptionModal";
@@ -10,14 +10,57 @@ import { DealCard } from './DealCard';
 import { useNavigate } from 'react-router-dom';
 import type { Deal } from '../lib/deals';
 import { Layout } from "./Layout";
+import { Card, CardContent } from "./ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import ResearchRequests from "./ResearchRequests";
 
-export default function ResearchPage() {
+// Auth context checker wrapper
+const AuthContextChecker = ({ children }: { children: React.ReactNode }) => {
+  try {
+    // Try to access auth context but don't use the result
+    useAuth();
+    // If we get here, auth context is available
+    return <>{children}</>;
+  } catch (error) {
+    // If auth context is not available, show a fallback
+    return (
+      <Layout>
+        <div className="min-h-screen flex flex-col items-center justify-center p-4">
+          <Card className="p-6 max-w-md w-full">
+            <h2 className="text-xl font-bold mb-4 text-center">Authentication Error</h2>
+            <p className="text-muted-foreground mb-6 text-center">
+              Unable to load authentication. Please refresh the page or try again later.
+            </p>
+            <Button 
+              className="w-full" 
+              onClick={() => window.location.reload()}
+            >
+              Refresh Page
+            </Button>
+          </Card>
+        </div>
+      </Layout>
+    );
+  }
+};
+
+const ResearchPage: React.FC = () => {
+  return (
+    <AuthContextChecker>
+      <ResearchPageContent />
+    </AuthContextChecker>
+  );
+};
+
+// Separate the main component content to ensure useAuth is only called when context is available
+const ResearchPageContent: React.FC = () => {
   const { user, profile, isLoading } = useAuth();
   const navigate = useNavigate();
   const [deals, setDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] =
     React.useState(false);
+  const [activeTab, setActiveTab] = React.useState("reports");
 
   // Remove the subscription check for now
   const isPro = true; // Temporarily allow access to all users
@@ -88,7 +131,25 @@ export default function ResearchPage() {
                 </p>
               </div>
               {isPro ? (
-                <ResearchReports isPro={isPro} />
+                <Tabs
+                  defaultValue="reports"
+                  value={activeTab}
+                  onValueChange={setActiveTab}
+                  className="mb-8"
+                >
+                  <TabsList className="mb-4">
+                    <TabsTrigger value="reports">Research Reports</TabsTrigger>
+                    <TabsTrigger value="requests">Research Requests</TabsTrigger>
+                  </TabsList>
+
+                  <TabsContent value="reports">
+                    <ResearchReports user={user} profile={profile} />
+                  </TabsContent>
+
+                  <TabsContent value="requests">
+                    <ResearchRequests user={user} profile={profile} />
+                  </TabsContent>
+                </Tabs>
               ) : (
                 <div className="text-center py-12">
                   <h2 className="text-2xl font-semibold mb-4 text-accent">
@@ -131,4 +192,6 @@ export default function ResearchPage() {
       </PageTransition>
     </Layout>
   );
-}
+};
+
+export default ResearchPage;

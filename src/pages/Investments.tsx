@@ -1,0 +1,1 @@
+import { PropertyCard } from "../components/PropertyCard"; 

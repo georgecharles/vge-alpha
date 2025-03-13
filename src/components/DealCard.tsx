@@ -4,7 +4,6 @@ import { formatCurrency } from "../lib/utils";
 import { Card, CardContent, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { MapPin, MessageCircle } from "lucide-react";
-import { useAuth } from "../lib/auth";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { MessagesModal } from "./MessagesModal";
@@ -15,10 +14,18 @@ interface DealCardProps {
   isSubscriber: boolean;
   onClick?: () => void;
   isLoading?: boolean;
+  user?: any;
+  showMessageButton?: boolean;
 }
 
-export function DealCard({ deal, isSubscriber, onClick, isLoading }: DealCardProps) {
-  const { user } = useAuth();
+export function DealCard({ 
+  deal, 
+  isSubscriber, 
+  onClick, 
+  isLoading,
+  user,
+  showMessageButton = true
+}: DealCardProps) {
   const navigate = useNavigate();
   const [isMessageModalOpen, setIsMessageModalOpen] = useState(false);
   
@@ -105,7 +112,7 @@ export function DealCard({ deal, isSubscriber, onClick, isLoading }: DealCardPro
               </div>
             </div>
 
-            {user && (
+            {user && showMessageButton && (
               <Button
                 variant="outline"
                 className="w-full"
@@ -119,13 +126,15 @@ export function DealCard({ deal, isSubscriber, onClick, isLoading }: DealCardPro
         </CardContent>
       </Card>
 
-      <MessagesModal
-        isOpen={isMessageModalOpen}
-        onClose={() => setIsMessageModalOpen(false)}
-        receiverId="admin"
-        dealId={deal.id}
-        deal={deal}
-      />
+      {user && (
+        <MessagesModal
+          isOpen={isMessageModalOpen}
+          onClose={() => setIsMessageModalOpen(false)}
+          receiverId="admin"
+          dealId={deal.id}
+          deal={deal}
+        />
+      )}
     </>
   );
 } 

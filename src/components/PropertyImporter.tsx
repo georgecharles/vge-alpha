@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
-import { Card } from './ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 import { Checkbox } from './ui/checkbox';
 import {
   Dialog,
@@ -15,9 +15,14 @@ import { useToast } from './ui/use-toast';
 import { ScrapedProperty, searchProperties, importProperties } from '../lib/propertyScraperService';
 import { useAuth } from '../lib/auth';
 import { Badge } from './ui/badge';
-import { Bed, Bath, Home, MapPin } from 'lucide-react';
+import { Bed, Bath, Home, MapPin, Upload, CheckCircle2, AlertCircle, Info, RefreshCw } from 'lucide-react';
+import { Textarea } from './ui/textarea';
+import { Label } from './ui/label';
+import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { AuthContextChecker } from '../lib/AuthContextChecker';
 
-export function PropertyImporter() {
+// Component that safely uses auth context
+function PropertyImporterContent() {
   const [isOpen, setIsOpen] = useState(false);
   const [location, setLocation] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -27,6 +32,11 @@ export function PropertyImporter() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalResults, setTotalResults] = useState(0);
+  const [fileData, setFileData] = useState<File | null>(null);
+  const [jsonData, setJsonData] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [importStatus, setImportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [statusMessage, setStatusMessage] = useState('');
   
   const { user } = useAuth();
   const { toast } = useToast();
@@ -106,142 +116,163 @@ export function PropertyImporter() {
     await handleSearch();
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFileData(e.target.files[0]);
+      // Reset JSON input when file is selected
+      setJsonData('');
+    }
+  };
+
+  const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setJsonData(e.target.value);
+    // Reset file input when JSON is entered
+    setFileData(null);
+  };
+
   return (
-    <>
-      <Button 
-        onClick={() => setIsOpen(true)}
-        className="bg-gradient-to-r from-emerald-400 to-cyan-400 text-white hover:from-emerald-500 hover:to-cyan-500"
-      >
-        Import Properties
-      </Button>
-
-      <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>Import Properties</DialogTitle>
-            <DialogDescription>
-              Search for properties by location and select the ones you want to import.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex gap-2 my-4">
-            <Input
-              placeholder="Enter city or postcode (e.g., London or SW1A 1AA)"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              className="flex-1"
-            />
-            <Button onClick={handleSearch} disabled={isSearching}>
-              {isSearching ? <LoadingSpinner /> : 'Search'}
-            </Button>
-          </div>
-
-          {totalResults > 0 && (
-            <p className="text-sm text-muted-foreground mb-4">
-              Found {totalResults.toLocaleString()} properties in {location}
-            </p>
-          )}
-
-          <div className="flex-1 overflow-auto min-h-[400px]">
-            {isSearching ? (
-              <div className="flex justify-center items-center h-40">
-                <LoadingSpinner />
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold mb-2">Property Importer</h1>
+        <p className="text-muted-foreground">
+          Import properties from external sources by uploading a JSON file or pasting JSON data.
+        </p>
+      </div>
+      
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>Upload JSON File</CardTitle>
+            <CardDescription>
+              Import properties from a JSON file
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center hover:bg-muted/50 transition-colors">
+                <Upload className="h-10 w-10 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground mb-2">
+                  Drag and drop a JSON file here, or click to browse
+                </p>
+                <Input
+                  type="file"
+                  accept=".json"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  id="file-upload"
+                />
+                <Label htmlFor="file-upload" className="cursor-pointer">
+                  <Button variant="outline" type="button">Browse Files</Button>
+                </Label>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {searchResults.map((property) => (
-                  <Card key={property.id} className="overflow-hidden">
-                    <div className="aspect-video relative">
-                      <img
-                        src={property.image_url}
-                        alt={property.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 right-2">
-                        <Checkbox
-                          checked={selectedProperties.has(property.id)}
-                          onCheckedChange={() => toggleProperty(property.id)}
-                          className="h-6 w-6 bg-white/90"
-                        />
-                      </div>
-                      <Badge 
-                        className="absolute bottom-2 left-2 bg-white/90 text-black"
-                        variant="secondary"
-                      >
-                        {property.property_type}
-                      </Badge>
-                    </div>
-                    <div className="p-4">
-                      <h3 className="font-medium line-clamp-2 mb-2">{property.title}</h3>
-                      <div className="flex items-center gap-2 text-muted-foreground mb-2">
-                        <MapPin className="h-4 w-4" />
-                        <span className="text-sm line-clamp-1">{property.location}</span>
-                      </div>
-                      <p className="text-lg font-semibold mb-3">
-                        £{property.price.toLocaleString()}
-                      </p>
-                      <div className="flex gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Bed className="h-4 w-4" />
-                          <span>{property.bedrooms}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Bath className="h-4 w-4" />
-                          <span>{property.bathrooms}</span>
-                        </div>
-                        {property.sqft > 0 && (
-                          <div className="flex items-center gap-1">
-                            <Home className="h-4 w-4" />
-                            <span>{property.sqft} sq ft</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {searchResults.length > 0 && (
-            <div className="flex justify-between items-center mt-4 pt-4 border-t">
-              <div className="flex items-center gap-4">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    disabled={currentPage === 1 || isSearching}
-                    onClick={() => handlePageChange(currentPage - 1)}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outline"
-                    disabled={currentPage === totalPages || isSearching}
-                    onClick={() => handlePageChange(currentPage + 1)}
-                  >
-                    Next
-                  </Button>
+              
+              {fileData && (
+                <div className="bg-muted p-3 rounded text-sm">
+                  <p className="font-medium mb-1">Selected file:</p>
+                  <p className="text-muted-foreground">{fileData.name} ({Math.round(fileData.size / 1024)} KB)</p>
                 </div>
-                <span className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages}
-                </span>
-              </div>
-              <Button
-                disabled={selectedProperties.size === 0 || isImporting}
-                onClick={handleImport}
-                className="bg-gradient-to-r from-emerald-400 to-cyan-400 text-white hover:from-emerald-500 hover:to-cyan-500"
-              >
-                {isImporting ? (
-                  <LoadingSpinner />
-                ) : (
-                  `Import ${selectedProperties.size} Properties`
-                )}
-              </Button>
+              )}
             </div>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader>
+            <CardTitle>Paste JSON Data</CardTitle>
+            <CardDescription>
+              Paste your JSON data directly
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Textarea
+                placeholder='{"properties": [{"address": "123 Main St", "price": 250000, ...}]}'
+                rows={8}
+                value={jsonData}
+                onChange={handleJsonChange}
+                className="font-mono text-sm"
+              />
+              <p className="text-xs text-muted-foreground">
+                JSON must be properly formatted and contain property data.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      
+      <div className="mt-8 flex justify-end">
+        <Button 
+          onClick={handleImport} 
+          disabled={isSubmitting || (!fileData && !jsonData)}
+          className="px-8"
+        >
+          {isSubmitting ? 'Importing...' : 'Import Properties'}
+        </Button>
+      </div>
+      
+      {importStatus !== 'idle' && (
+        <Alert 
+          variant={importStatus === 'success' ? 'default' : 'destructive'} 
+          className="mt-6"
+        >
+          {importStatus === 'success' ? (
+            <CheckCircle2 className="h-4 w-4" />
+          ) : (
+            <AlertCircle className="h-4 w-4" />
           )}
-        </DialogContent>
-      </Dialog>
-    </>
+          <AlertTitle>
+            {importStatus === 'success' ? 'Import Successful' : 'Import Failed'}
+          </AlertTitle>
+          <AlertDescription>{statusMessage}</AlertDescription>
+        </Alert>
+      )}
+      
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Info className="h-5 w-5" />
+            Import Format Guidelines
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Your JSON data should follow this structure:
+            </p>
+            <pre className="bg-muted p-4 rounded-md text-xs overflow-auto">
+{`{
+  "properties": [
+    {
+      "address": "123 Main Street, London, E1 6AN",
+      "price": 450000,
+      "type": "flat",
+      "bedrooms": 2,
+      "bathrooms": 1,
+      "size_sqft": 750,
+      "description": "A spacious 2 bedroom flat...",
+      "images": ["image1.jpg", "image2.jpg"]
+    },
+    {
+      // Additional properties...
+    }
+  ]
+}`}
+            </pre>
+            <p className="text-sm text-muted-foreground">
+              You can also import a simple array of property objects.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Main component that handles auth context checking
+export function PropertyImporter() {
+  return (
+    <AuthContextChecker>
+      <PropertyImporterContent />
+    </AuthContextChecker>
   );
 } 

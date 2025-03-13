@@ -12,7 +12,7 @@ import {
   Bitcoin,
 } from "lucide-react";
 import { getSavedProperties } from "../lib/properties";
-import PropertyCard from "./PropertyCard";
+import { PropertyCard } from "./PropertyCard";
 import { supabase } from "../lib/supabase";
 import { Layout } from "./Layout";
 import { BitcoinPrice } from "./BitcoinPrice";

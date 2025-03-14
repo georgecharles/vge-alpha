@@ -55,7 +55,7 @@ function Navbar() {
     }
   };
 
-  const profile = user?.profile;
+  const profile = user?.user_metadata || {};
 
   return (
     <>
@@ -204,7 +204,7 @@ function Navbar() {
                   </NavigationMenuContent>
                 </NavigationMenuItem>
                 <NavigationMenuItem>
-                  <Link to="/deals" legacyBehavior passHref>
+                  <Link to="/deals">
                     <NavigationMenuLink
                       className={cn(
                         "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50",
@@ -216,7 +216,7 @@ function Navbar() {
                   </Link>
                 </NavigationMenuItem>
                 <NavigationMenuItem>
-                  <Link to="/insights-ai" legacyBehavior passHref>
+                  <Link to="/insights-ai">
                     <NavigationMenuLink
                       className={cn(
                         "group inline-flex h-9 w-max items-center justify-center rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none disabled:pointer-events-none disabled:opacity-50 data-[active]:bg-accent/50 data-[state=open]:bg-accent/50",
@@ -233,58 +233,59 @@ function Navbar() {
             </NavigationMenu>
           </div>
           <div className="flex flex-1 items-center justify-end">
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    className="relative h-10 w-10 rounded-full"
-                  >
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage
-                        src={profile?.avatar_url || ""}
-                        alt={profile?.full_name || user.email || "User"}
-                      />
-                      <AvatarFallback>
-                        {profile?.full_name
-                          ? profile.full_name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")
-                          : user.email?.slice(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+            <div className="w-[140px] flex justify-end">
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="relative h-10 w-10 rounded-full"
+                    >
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage
+                          src={profile?.avatar_url || ""}
+                          alt={profile?.full_name || user.email || "User"}
+                        />
+                        <AvatarFallback>
+                          {profile?.full_name
+                            ? profile.full_name
+                                .split(" ")
+                                .map((n: string) => n[0])
+                                .join("")
+                            : user.email?.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-56" align="end">
+                    <div className="p-2 text-sm font-medium">
+                      {profile?.full_name || user.email}
+                    </div>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link to="/account">Account</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/portfolio">Portfolio</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/saved">Saved Properties</Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleLogout}>
+                      Log out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <div className="flex items-center space-x-2">
+                  <Button variant="ghost" onClick={handleLoginClick}>
+                    Log in
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end">
-                  <div className="p-2 text-sm font-medium">
-                    {profile?.full_name || user.email}
-                  </div>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link to="/account">Account</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/portfolio">Portfolio</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link to="/saved">Saved Properties</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <div className="flex items-center space-x-2">
-                {/* Use onClick instead of href to open modal consistently across all pages */}
-                <Button variant="ghost" onClick={handleLoginClick}>
-                  Log in
-                </Button>
-                <Button onClick={handleSignupClick}>Sign up</Button>
-              </div>
-            )}
+                  <Button onClick={handleSignupClick}>Sign up</Button>
+                </div>
+              )}
+            </div>
             <div className="ml-4 md:hidden">
               <Sheet>
                 <SheetTrigger asChild>

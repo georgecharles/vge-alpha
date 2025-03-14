@@ -10,6 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 import { Slider } from "./ui/slider";
 import { Calculator, Home, TrendingUp, PoundSterling } from "lucide-react";
 
+/**
+ * @deprecated This calculator component is being replaced by the new Calculators page.
+ * For new features and improvements, please use the Calculators component in src/pages/Calculators.tsx
+ */
+
 // Auth context checker wrapper
 const AuthContextChecker = ({ children }: { children: React.ReactNode }) => {
   try {
@@ -50,7 +55,7 @@ const InvestmentCalculator = () => {
 
 // Separate the main component content to ensure useAuth is only called when context is available
 const InvestmentCalculatorContent = () => {
-  const { user, profile } = useAuth();
+  const { /* user, profile */ } = useAuth(); // Commented out unused variables
   const [calculatorType, setCalculatorType] = useState("mortgage");
   
   // Mortgage calculator state

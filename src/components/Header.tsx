@@ -150,6 +150,19 @@ export default function Header({
     }
   };
 
+  // Handle click on mobile nav link
+  const handleMobileNavLinkClick = (e: React.MouseEvent<HTMLAnchorElement>, requiresAuth: boolean, href: string) => {
+    // If link requires auth and user is not authenticated, prevent default and show login modal
+    if (requiresAuth && !actualIsAuthenticated) {
+      e.preventDefault();
+      setLoginModalOpen(true);
+      setShowMobileMenu(false); // Close mobile menu when opening login modal
+    } else {
+      // If user is authenticated or link doesn't require auth, just navigate normally
+      setShowMobileMenu(false);
+    }
+  };
+
   const ListItem = React.forwardRef<
     React.ElementRef<"a">,
     React.ComponentPropsWithoutRef<"a"> & {
@@ -359,86 +372,88 @@ export default function Header({
                   Upgrade
                 </Button>
 
-                {/* Auth Buttons or User Menu */}
-                {!actualIsAuthenticated ? (
-                  <div className="hidden md:flex items-center gap-2">
-                    <Button 
-                      variant="ghost" 
-                      onClick={handleLoginClick} 
-                      className="rounded-full hover:bg-gray-100"
-                    >
-                      <LogIn className="mr-2 h-4 w-4" />
-                      Sign In
-                    </Button>
-                    <Button 
-                      onClick={() => onSignUp?.()} 
-                      className="rounded-full bg-black text-white hover:bg-gray-800"
-                    >
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Sign Up
-                    </Button>
-                  </div>
-                ) : (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        className="relative h-10 w-10 rounded-full"
+                {/* Auth Buttons or User Menu - adding a fixed-width wrapper for consistent layout */}
+                <div className="w-[160px] flex justify-end">
+                  {!actualIsAuthenticated ? (
+                    <div className="hidden md:flex items-center gap-2">
+                      <Button 
+                        variant="ghost" 
+                        onClick={handleLoginClick} 
+                        className="rounded-full hover:bg-gray-100"
                       >
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage
-                            src={`https://ui-avatars.com/api/?name=${encodeURIComponent(actualUserProfile?.full_name || "")}&background=random`}
-                            alt={actualUserProfile?.full_name || "User avatar"}
-                          />
-                          <AvatarFallback className="bg-primary/10">
-                            {actualUserProfile?.full_name
-                              ?.split(" ")
-                              .filter(Boolean)
-                              .map((n) => n[0])
-                              .slice(0, 2)
-                              .join("")
-                              .toUpperCase() || "U"}
-                          </AvatarFallback>
-                        </Avatar>
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Sign In
                       </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent 
-                      className="w-56 mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg" 
-                      align="end" 
-                      forceMount
-                    >
-                      <DropdownMenuItem className="flex-col items-start">
-                        <div className="font-medium">
-                          {actualUserProfile?.full_name}
-                        </div>
-                        <div className="text-sm text-muted-foreground">
-                          {actualUserProfile?.email}
-                        </div>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => navigate("/dashboard")}>
-                        <LayoutDashboard className="mr-2 h-4 w-4" />
-                        <span>Dashboard</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/account")}>
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Account Settings</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => navigate("/messages")}>
-                        <MessageCircle className="mr-2 h-4 w-4" />
-                        <span>Messages</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        className="text-red-500 focus:text-red-500" 
-                        onClick={handleSignOut}
+                      <Button 
+                        onClick={() => onSignUp?.()} 
+                        className="rounded-full bg-black text-white hover:bg-gray-800"
                       >
-                        <LogOut className="mr-2 h-4 w-4" />
-                        <span>Log Out</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Sign Up
+                      </Button>
+                    </div>
+                  ) : (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          className="relative h-10 w-10 rounded-full"
+                        >
+                          <Avatar className="h-10 w-10">
+                            <AvatarImage
+                              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(actualUserProfile?.full_name || "")}&background=random`}
+                              alt={actualUserProfile?.full_name || "User avatar"}
+                            />
+                            <AvatarFallback className="bg-primary/10">
+                              {actualUserProfile?.full_name
+                                ?.split(" ")
+                                .filter(Boolean)
+                                .map((n) => n[0])
+                                .slice(0, 2)
+                                .join("")
+                                .toUpperCase() || "U"}
+                            </AvatarFallback>
+                          </Avatar>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent 
+                        className="w-56 mt-2 bg-white border border-gray-200 rounded-2xl shadow-lg" 
+                        align="end" 
+                        forceMount
+                      >
+                        <DropdownMenuItem className="flex-col items-start">
+                          <div className="font-medium">
+                            {actualUserProfile?.full_name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {actualUserProfile?.email}
+                          </div>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                          <LayoutDashboard className="mr-2 h-4 w-4" />
+                          <span>Dashboard</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate("/account")}>
+                          <Settings className="mr-2 h-4 w-4" />
+                          <span>Account Settings</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate("/messages")}>
+                          <MessageCircle className="mr-2 h-4 w-4" />
+                          <span>Messages</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-500 focus:text-red-500" 
+                          onClick={handleSignOut}
+                        >
+                          <LogOut className="mr-2 h-4 w-4" />
+                          <span>Log Out</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -510,12 +525,20 @@ export default function Header({
             <div key={index} className="space-y-3">
               {item.href ? (
                 <a
-                  href={(!item.requiresAuth || actualIsAuthenticated) ? item.href : "#"}
-                  className="flex items-center space-x-3 text-lg font-medium hover:text-primary transition-colors"
-                  onClick={handleLoginClick}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center space-x-3 text-lg font-medium transition-colors",
+                    (!item.requiresAuth || actualIsAuthenticated) 
+                      ? "hover:text-primary" 
+                      : "text-muted-foreground hover:text-primary/70"
+                  )}
+                  onClick={(e) => handleMobileNavLinkClick(e, item.requiresAuth, item.href)}
                 >
                   <span className="text-xl">{item.icon}</span>
                   <span>{item.title}</span>
+                  {item.requiresAuth && !actualIsAuthenticated && (
+                    <span className="ml-2 text-xs text-muted-foreground">(Sign in required)</span>
+                  )}
                 </a>
               ) : (
                 <>
@@ -528,8 +551,13 @@ export default function Header({
                       <a
                         key={subIndex}
                         href={subItem.href}
-                        className="block text-base text-muted-foreground hover:text-primary transition-colors"
-                        onClick={handleLoginClick}
+                        className={cn(
+                          "block text-base transition-colors",
+                          (!subItem.requiresAuth || actualIsAuthenticated) 
+                            ? "text-muted-foreground hover:text-primary" 
+                            : "text-muted-foreground/70 hover:text-primary/70"
+                        )}
+                        onClick={(e) => handleMobileNavLinkClick(e, subItem.requiresAuth, subItem.href)}
                       >
                         {subItem.title}
                         {subItem.requiresAuth && !actualIsAuthenticated && (

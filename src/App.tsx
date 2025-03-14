@@ -28,6 +28,7 @@ import AboutUsPage from "./components/AboutUsPage";
 import DealsPage from "./components/DealsPage";
 import Messages from "./components/Messages";
 import Listings from './pages/Listings';
+import Calculators from "./pages/Calculators";
 
 // Wrap the main content in a component to use hooks
 function AppContent() {
@@ -77,7 +78,7 @@ function AppContent() {
           <Route path="/deals" element={<DealsPage />} />
           <Route path="/trends" element={<MarketTrendsPage />} />
           <Route path="/insights" element={<MarketInsightsPage />} />
-          <Route path="/calculators" element={<InvestmentCalculator />} />
+          <Route path="/calculators" element={<Calculators />} />
           <Route path="/profile" element={<AccountSettings />} />
           <Route path="/login" element={<Navigate to="/" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />

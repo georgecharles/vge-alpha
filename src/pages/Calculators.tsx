@@ -17,17 +17,19 @@ const Calculators = () => {
 
   return (
     <div className="flex flex-col min-h-screen">
-      {/* Hero Section */}
-      <HeroSection
-        title="Property Investment Calculators"
-        subtitle="Powerful tools to analyze investments, calculate mortgage payments, and estimate potential returns"
-        showSearch={false}
-        showStats={false}
-        height="h-[400px]"
-      />
+      {/* Hero Section - ensure it's at the top and visible */}
+      <div className="w-full">
+        <HeroSection
+          title="Property Investment Calculators"
+          subtitle="Powerful tools to analyze investments, calculate mortgage payments, and estimate potential returns"
+          showSearch={false}
+          showStats={false}
+          height="h-[400px]"
+        />
+      </div>
       
-      {/* Main Content */}
-      <div className="container mx-auto px-4 py-12">
+      {/* Main Content - add some margin to ensure it's not overlapping with the hero */}
+      <div className="container mx-auto px-4 py-12 mt-6">
         <Tabs defaultValue="mortgage" className="w-full">
           <TabsList className="w-full mb-8">
             <div className="grid w-full grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-2">

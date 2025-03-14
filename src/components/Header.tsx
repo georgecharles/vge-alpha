@@ -218,9 +218,9 @@ export default function Header({
                 </a>
 
                 {/* Desktop Navigation */}
-              <NavigationMenu className="hidden lg:flex">
+                <NavigationMenu className="hidden lg:flex">
                   <NavigationMenuList className="gap-2">
-                  <NavigationMenuItem>
+                    <NavigationMenuItem>
                       <NavigationMenuTrigger 
                         className={cn(
                           "text-sm font-medium rounded-full px-4",
@@ -331,17 +331,9 @@ export default function Header({
               </div>
 
               {/* Right Side Actions */}
-              <div className="flex items-center gap-4">
-                <Button
-                  variant="ghost"
-                  className="lg:hidden p-2"
-                  onClick={() => setShowMobileMenu(true)}
-                >
-                  <Menu className="h-6 w-6" />
-                </Button>
-
-                {/* Help & Support + About Us */}
-                <nav className="hidden lg:flex items-center gap-2 mr-4">
+              <div className="flex items-center gap-2">
+                {/* Help & Support + About Us - Only show on desktop and when there's enough space */}
+                <nav className="hidden lg:flex items-center gap-2">
                   <a 
                     href="/help"
                     className={cn(
@@ -362,7 +354,7 @@ export default function Header({
                   </a>
                 </nav>
 
-                {/* Upgrade Button */}
+                {/* Upgrade Button - Only show on tablet and larger screens */}
                 <Button
                   variant="ghost"
                   className="hidden md:flex bg-gradient-to-r from-emerald-400 to-cyan-400 text-white hover:from-emerald-500 hover:to-cyan-500 rounded-full border border-emerald-500/20 shadow-lg hover:shadow-emerald-500/20 transition-all duration-300"
@@ -372,8 +364,8 @@ export default function Header({
                   Upgrade
                 </Button>
 
-                {/* Auth Buttons or User Menu - adding a fixed-width wrapper for consistent layout */}
-                <div className="w-[160px] flex justify-end">
+                {/* Auth Buttons or User Menu */}
+                <div className="flex items-center">
                   {!actualIsAuthenticated ? (
                     <div className="hidden md:flex items-center gap-2">
                       <Button 
@@ -453,6 +445,15 @@ export default function Header({
                       </DropdownMenuContent>
                     </DropdownMenu>
                   )}
+                  
+                  {/* Mobile Menu Button - Move closer to avatar */}
+                  <Button
+                    variant="ghost"
+                    className="lg:hidden p-2 ml-2"
+                    onClick={() => setShowMobileMenu(true)}
+                  >
+                    <Menu className="h-6 w-6" />
+                  </Button>
                 </div>
               </div>
             </div>

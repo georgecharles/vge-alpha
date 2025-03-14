@@ -1,5 +1,5 @@
-import React, { Suspense, useEffect, useState } from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Suspense, useEffect, useState } from "react";
+import { Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { Toaster } from "./components/ui/toaster";
 import { AuthProvider, useAuth } from "./lib/auth";
 import { Loading } from "./components/ui/loading";
@@ -12,13 +12,11 @@ import SubscriptionSuccess from "./components/SubscriptionSuccess";
 import SubscriptionCancel from "./components/SubscriptionCancel";
 import AccountSettings from "./components/AccountSettings";
 import NotFound from "./components/NotFound";
-import FeaturedProperties from "./components/SearchResults";
 import MarketInsightsPage from "./components/MarketInsightsPage";
 import MarketTrendsPage from "./components/MarketTrendsPage";
 import { ArticlePage } from "./components/ArticlePage";
 import ResearchPage from "./components/ResearchPage";
 import BlogPage from "./components/BlogPage";
-import InvestmentCalculator from "./components/InvestmentCalculator";
 import HelpSupportPage from "./components/HelpSupportPage";
 import { ChatBot } from "./components/ChatBot";
 import AuthCallback from "./components/AuthCallback";
@@ -26,9 +24,23 @@ import PropertyManagementPage from "./components/PropertyManagementPage";
 import InvestmentOpportunitiesPage from "./components/InvestmentOpportunitiesPage";
 import AboutUsPage from "./components/AboutUsPage";
 import DealsPage from "./components/DealsPage";
-import Messages from "./components/Messages";
+import Messages from "./pages/Messages";
 import Listings from './pages/Listings';
 import Calculators from "./pages/Calculators";
+
+// Add a wrapper component for ArticlePage that extracts URL parameters
+function ArticlePageWrapper() {
+  const { title } = useParams();
+  
+  // Provide default or placeholder values
+  return (
+    <ArticlePage 
+      title={title || "Loading..."} 
+      content="Content is loading..." 
+      date={new Date().toISOString().split('T')[0]} 
+    />
+  );
+}
 
 // Wrap the main content in a component to use hooks
 function AppContent() {
@@ -88,8 +100,8 @@ function AppContent() {
           <Route path="/account" element={<AccountSettings />} />
           <Route path="/research" element={<ResearchPage />} />
           <Route path="/blog" element={<BlogPage />} />
-          <Route path="/article/:title" element={<ArticlePage />} />
-          <Route path="/blog/:slug" element={<ArticlePage />} />
+          <Route path="/article/:title" element={<ArticlePageWrapper />} />
+          <Route path="/blog/:slug" element={<ArticlePageWrapper />} />
           <Route path="/help" element={<HelpSupportPage />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/property-management" element={<PropertyManagementPage />} />

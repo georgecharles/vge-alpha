@@ -41,13 +41,18 @@ export interface MessageWithProfiles extends Message {
   deal?: Deal;
 }
 
+// Define User interface for consistent typing
+export interface User {
+  id: string;
+  full_name?: string;
+  email?: string;
+  avatar_url?: string;
+}
+
+// Define Conversation interface with proper User typing
 export interface Conversation {
-  user: {
-    id: string;
-    full_name: string;
-    avatar_url?: string;
-  };
-  lastMessage: MessageWithProfiles;
+  user: User;
+  lastMessage: MessageWithProfiles | null;
   unreadCount: number;
 }
 
@@ -72,7 +77,7 @@ export async function sendMessage(receiverId: string, content: string, dealId?: 
       .insert({
         sender_id: user.user.id,
         receiver_id: receiverId,
-        content,
+        content: filterProfanity(content),
         deal_id: dealId,
         is_read: false
       })
@@ -105,47 +110,81 @@ export async function sendMessage(receiverId: string, content: string, dealId?: 
 // Get conversations for the current user
 export async function getConversations(): Promise<Conversation[]> {
   try {
-    const { data: user, error: userError } = await supabase.auth.getUser();
-    if (userError || !user.user) throw new Error('User not authenticated');
-
-    // Get the latest message from each conversation
-    const { data, error } = await supabase
-      .from('messages')
-      .select(`
-        *,
-        sender:profiles!sender_id(*),
-        receiver:profiles!receiver_id(*),
-        deal:deals(*)
-      `)
-      .or(`sender_id.eq.${user.user.id},receiver_id.eq.${user.user.id}`)
-      .order('created_at', { ascending: false });
-
-    if (error) throw error;
-
-    // Process conversations
-    const conversationsMap = new Map<string, Conversation>();
+    // Get the current user session
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     
-    data.forEach((message: MessageWithProfiles) => {
-      const otherUser = message.sender_id === user.user.id ? message.receiver : message.sender;
-      const conversationId = otherUser.id;
-
-      if (!conversationsMap.has(conversationId)) {
-        conversationsMap.set(conversationId, {
-          user: otherUser,
-          lastMessage: message,
-          unreadCount: message.receiver_id === user.user.id && !message.is_read ? 1 : 0
-        });
-      } else if (message.receiver_id === user.user.id && !message.is_read) {
-        const conversation = conversationsMap.get(conversationId)!;
-        conversation.unreadCount++;
+    if (sessionError) {
+      console.error('Session error in getConversations:', sessionError);
+      return [];
+    }
+    
+    // If no session from getSession, try getUser as fallback
+    if (!session) {
+      console.log('No active session found in getConversations - trying getUser fallback');
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData?.user) {
+        console.error('User not authenticated in getConversations:', userError || 'No user data');
+        return [];
       }
-    });
-
-    return Array.from(conversationsMap.values());
+      
+      const userId = userData.user.id;
+      console.log(`Found user via getUser: ${userId}`);
+      
+      return await fetchConversationsForUser(userId);
+    }
+    
+    // We have a session, use it for the query
+    const userId = session.user.id;
+    console.log(`Using session user for conversations: ${userId}`);
+    
+    return await fetchConversationsForUser(userId);
   } catch (error) {
     console.error('Error getting conversations:', error);
     return [];
   }
+}
+
+// Helper function to fetch conversations for a specific user ID
+async function fetchConversationsForUser(userId: string): Promise<Conversation[]> {
+  // Use the .filter() method with proper parameters
+  const { data, error } = await supabase
+    .from('messages')
+    .select(`
+      *,
+      sender:profiles!sender_id(id, full_name, avatar_url),
+      receiver:profiles!receiver_id(id, full_name, avatar_url),
+      deal:deals(*)
+    `)
+    .filter('sender_id', 'eq', userId)
+    .filter('receiver_id', 'eq', userId, { foreignTable: 'or' })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching conversations:', error);
+    return [];
+  }
+
+  // Process conversations
+  const conversationsMap = new Map<string, Conversation>();
+  
+  data?.forEach((message: MessageWithProfiles) => {
+    const otherUser = message.sender_id === userId ? message.receiver : message.sender;
+    const conversationId = otherUser.id;
+
+    if (!conversationsMap.has(conversationId)) {
+      conversationsMap.set(conversationId, {
+        user: otherUser,
+        lastMessage: message,
+        unreadCount: message.receiver_id === userId && !message.is_read ? 1 : 0
+      });
+    } else if (message.receiver_id === userId && !message.is_read) {
+      const conversation = conversationsMap.get(conversationId)!;
+      conversation.unreadCount++;
+    }
+  });
+
+  return Array.from(conversationsMap.values());
 }
 
 // Get messages between current user and another user
@@ -219,8 +258,8 @@ export function subscribeToMessages(callback: (message: MessageWithProfiles) => 
             .from('messages')
             .select(`
               *,
-              sender:profiles!sender_id(*),
-              receiver:profiles!receiver_id(*),
+              sender:profiles!sender_id(id, full_name, avatar_url),
+              receiver:profiles!receiver_id(id, full_name, avatar_url),
               deal:deals(*)
             `)
             .eq('id', payload.new.id)
@@ -253,5 +292,61 @@ export async function markMessageAsRead(messageId: string) {
   } catch (error) {
     console.error('Error marking message as read:', error);
     return false;
+  }
+}
+
+// Search users - helper function for finding users to message
+export async function searchUsers(searchTerm: string) {
+  try {
+    let userId: string;
+    
+    // Try to get authentication info using both methods
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (session) {
+      userId = session.user.id;
+      console.log(`Using session user for search: ${userId}`);
+    } else {
+      // Fallback to getUser
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData?.user) {
+        console.error('Failed to get authenticated user:', userError);
+        throw new Error('Authentication required to search users');
+      }
+      
+      userId = userData.user.id;
+      console.log(`Using getUser result for search: ${userId}`);
+    }
+    
+    // Start with the base query
+    let query = supabase
+      .from('profiles')
+      .select('id, full_name, email, avatar_url')
+      .neq('id', userId);
+    
+    // Add search filter if term is provided
+    if (searchTerm && searchTerm.trim()) {
+      const formattedTerm = `%${searchTerm.trim()}%`;
+      
+      // Use multiple .ilike() calls instead of .or() with string interpolation
+      query = query.or(
+        `full_name.ilike.${formattedTerm},email.ilike.${formattedTerm}`
+      );
+    }
+    
+    // Execute the query
+    const { data, error } = await query;
+    
+    if (error) {
+      console.error('Database error in searchUsers:', error);
+      return [];
+    }
+    
+    console.log(`Search found ${data?.length || 0} users`);
+    return data || [];
+  } catch (error) {
+    console.error('Error in searchUsers:', error);
+    return [];
   }
 }

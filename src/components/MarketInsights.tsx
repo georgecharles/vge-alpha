@@ -1,6 +1,5 @@
 import React from "react";
 import { Card, CardContent, CardHeader } from "./ui/card";
-import { Newspaper, TrendingUp } from "lucide-react";
 import {
   fetchPropertyNews,
   generateMarketInsights,

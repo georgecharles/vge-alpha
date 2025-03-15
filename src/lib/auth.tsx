@@ -1,12 +1,26 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import { supabase } from "./supabase";
 import type { User } from "@supabase/supabase-js";
 import type { Tables } from "../types/supabase";
 import { GoogleSignupModal } from "../components/GoogleSignupModal";
+import { useToast } from '../components/ui/use-toast';
+
+// Add TypeScript declaration for import.meta.env
+declare global {
+  interface ImportMeta {
+    env: {
+      MODE: string;
+      VITE_SUPABASE_URL: string;
+      VITE_SUPABASE_ANON_KEY: string;
+      [key: string]: string | undefined;
+    };
+  }
+}
 
 type Profile = Tables<"profiles">;
 
 interface AuthContextType {
+  session: User | null;
   user: User | null;
   profile: Profile | null;
   isLoading: boolean;
@@ -20,6 +34,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshSession?: () => Promise<void>; // Add this for compatibility with App.tsx
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,9 +44,11 @@ const redirectUrl = import.meta.env.MODE === 'production'
   : 'http://localhost:5173/auth/callback';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<User | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   // Update the profile selection fields everywhere
   const PROFILE_SELECT = `
@@ -69,45 +86,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // Add refreshSession function for compatibility with App.tsx
+  const refreshSession = async () => {
+    try {
+      const { data } = await supabase.auth.getSession();
+      if (data.session?.user) {
+        setUser(data.session.user);
+        await fetchProfile(data.session.user.id);
+      }
+    } catch (error) {
+      console.error('Error refreshing session:', error);
+    }
+  };
+
   useEffect(() => {
     let mounted = true;
 
     const initializeAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: sessionData } = await supabase.auth.getSession();
         
-        if (error) throw error;
+        if (sessionData.session) {
+          setSession(sessionData.session.user);
+          setUser(sessionData.session.user);
+          // Update this query
+          const { data: existingProfile } = await supabase
+            .from('profiles')
+            .select(PROFILE_SELECT)
+            .eq('id', sessionData.session.user.id)
+            .single();
 
-        if (mounted) {
-          if (session?.user) {
-            setUser(session.user);
-            // Update this query
-            const { data: existingProfile } = await supabase
-              .from('profiles')
-              .select(PROFILE_SELECT)
-              .eq('id', session.user.id)
-              .single();
-
-            console.log('Initial profile load:', existingProfile);
-            setProfile(existingProfile);
-          }
-          setIsLoading(false);
+          console.log('Initial profile load:', existingProfile);
+          setProfile(existingProfile);
         }
+        setIsLoading(false);
 
         // Listen for auth changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(
-          async (event, session) => {
-            console.log('Auth state change:', event, session);
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+          async (event, newSession) => {
+            console.log('Auth state change:', event, newSession);
             
             if (mounted) {
-              if (session?.user) {
-                setUser(session.user);
+              if (newSession?.user) {
+                setUser(newSession.user);
                 
                 // Update this query
                 const { data: profile } = await supabase
                   .from('profiles')
                   .select(PROFILE_SELECT)
-                  .eq('id', session.user.id)
+                  .eq('id', newSession.user.id)
                   .single();
 
                 console.log('Profile after auth change:', profile);
@@ -123,7 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         return () => {
           mounted = false;
-          subscription.unsubscribe();
+          authListener?.subscription.unsubscribe();
         };
       } catch (error) {
         console.error('Error initializing auth:', error);
@@ -290,6 +317,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const value = {
+    session,
     user,
     profile,
     isLoading,
@@ -298,6 +326,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithGoogle,
     signOut,
     refreshProfile,
+    refreshSession,
   };
 
   return (

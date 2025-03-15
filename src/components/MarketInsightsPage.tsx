@@ -61,45 +61,49 @@ export default function MarketInsightsPage() {
 
   return (
     <AuthContextChecker>
-      <div className="flex flex-col w-full">
-        {/* Hero section at the very top, before any other content */}
-        <HeroSection
-          title="Property Market Insights & Analysis"
-          subtitle="Expert analysis, regional comparisons, and investment recommendations to guide your property decisions"
-          showSearch={false}
-          showStats={false}
-          height="h-[400px]"
-        />
+      <Layout>
+        <PageTransition>
+          <div className="flex flex-col w-full">
+            {/* Hero section with responsive height */}
+            <HeroSection
+              title="Property Market Insights & Analysis"
+              subtitle="Expert analysis, regional comparisons, and investment recommendations to guide your property decisions"
+              showSearch={false}
+              showStats={false}
+              height="h-[300px] sm:h-[350px] md:h-[400px]"
+            />
 
-        {/* Tab navigation after the hero */}
-        <div className="container mx-auto px-4 py-6">
-          <Tabs 
-            defaultValue="insights" 
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="mb-6">
-              <TabsTrigger value="insights">Market Insights</TabsTrigger>
-              <TabsTrigger value="visualization">Data Visualization</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="insights" className="mt-0">
-              {/* Don't render a hero inside MarketInsights since we already have one above */}
-              <MarketInsights 
-                user={user} 
-                profile={profile} 
-                className="mt-0"
-                showHero={false} // Pass prop to indicate hero should be hidden
-              />
-            </TabsContent>
-            
-            <TabsContent value="visualization" className="mt-0">
-              <DataVisualization user={user} profile={profile} />
-            </TabsContent>
-          </Tabs>
-        </div>
-      </div>
+            {/* Container with proper padding for mobile */}
+            <div className="container mx-auto px-4 py-4 sm:py-6">
+              <Tabs 
+                defaultValue="insights" 
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="w-full"
+              >
+                {/* Responsive tabs list */}
+                <TabsList className="w-full mb-4 sm:mb-6 grid grid-cols-2">
+                  <TabsTrigger value="insights" className="text-sm sm:text-base">Market Insights</TabsTrigger>
+                  <TabsTrigger value="visualization" className="text-sm sm:text-base">Data Visualization</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="insights" className="mt-0">
+                  <MarketInsights 
+                    user={user} 
+                    profile={profile} 
+                    className="mt-0"
+                    showHero={false}
+                  />
+                </TabsContent>
+                
+                <TabsContent value="visualization" className="mt-0">
+                  <DataVisualization user={user} profile={profile} />
+                </TabsContent>
+              </Tabs>
+            </div>
+          </div>
+        </PageTransition>
+      </Layout>
     </AuthContextChecker>
   );
 }

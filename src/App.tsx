@@ -27,6 +27,7 @@ import DealsPage from "./components/DealsPage";
 import Messages from "./pages/Messages";
 import Listings from './pages/Listings';
 import Calculators from "./pages/Calculators";
+import ReportDetailPage from "./components/ReportDetailPage";
 
 // Add a wrapper component for ArticlePage that extracts URL parameters
 function ArticlePageWrapper() {
@@ -99,6 +100,7 @@ function AppContent() {
           <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
           <Route path="/account" element={<AccountSettings />} />
           <Route path="/research" element={<ResearchPage />} />
+          <Route path="/research/reports/:slug" element={<ReportDetailPage />} />
           <Route path="/blog" element={<BlogPage />} />
           <Route path="/article/:title" element={<ArticlePageWrapper />} />
           <Route path="/blog/:slug" element={<ArticlePageWrapper />} />

@@ -5,7 +5,7 @@ import { Textarea } from "./ui/textarea";
 import { Label } from "./ui/label";
 import { Input } from "./ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { FileQuestion, Check, Clock, AlertTriangle } from "lucide-react";
+import { FileQuestion, Check, Clock, AlertTriangle, Download } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
 
 interface ResearchRequestsProps {

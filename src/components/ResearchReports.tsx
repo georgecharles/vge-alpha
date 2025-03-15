@@ -2,17 +2,53 @@ import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardFooter, CardHeader } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
-import { FileText, Download, Calendar, Tag } from "lucide-react";
+import { FileText, Download, Calendar, Tag, Eye } from "lucide-react";
 import { formatDistance } from "date-fns";
+import { Link, useNavigate } from "react-router-dom";
 
 interface ResearchReportsProps {
   user?: any;
   profile?: any;
 }
 
+// Updated report data structure to include slugs
+const reportData = [
+  {
+    id: 1,
+    title: "UK Property Market Outlook 2024",
+    slug: "uk-property-market-outlook-2024",
+    summary: "Comprehensive analysis of the UK property market trends, investment opportunities, and forecasts for 2024.",
+    date: "2024-05-15",
+    author: "Property Analysis Team",
+    category: "Market Analysis",
+    isPremium: true,
+  },
+  {
+    id: 2,
+    title: "Regional Investment Hotspots",
+    slug: "regional-investment-hotspots",
+    summary: "Detailed report on emerging regional investment opportunities across the UK, with focus on yields and growth potential.",
+    date: "2024-04-22",
+    author: "Investment Research Division",
+    category: "Investment",
+    isPremium: true,
+  },
+  {
+    id: 3,
+    title: "First-Time Buyer Guide 2024",
+    slug: "first-time-buyer-guide-2024",
+    summary: "Essential information and advice for first-time buyers navigating the property market in 2024.",
+    date: "2024-03-10",
+    author: "Homebuyer Advisory Team",
+    category: "Guides",
+    isPremium: false,
+  },
+];
+
 const ResearchReports: React.FC<ResearchReportsProps> = ({ user, profile }) => {
   const [reports, setReports] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     // Simulated fetch of research reports
@@ -21,38 +57,7 @@ const ResearchReports: React.FC<ResearchReportsProps> = ({ user, profile }) => {
         setLoading(true);
         // This would be an API call in a real app
         setTimeout(() => {
-          setReports([
-            {
-              id: 1,
-              title: "UK Property Market Outlook 2024",
-              summary: "Comprehensive analysis of the UK property market trends, investment opportunities, and forecasts for 2024.",
-              date: "2024-05-15",
-              author: "Property Analysis Team",
-              category: "Market Analysis",
-              isPremium: true,
-              downloadUrl: "#",
-            },
-            {
-              id: 2,
-              title: "Regional Investment Hotspots",
-              summary: "Detailed report on emerging regional investment opportunities across the UK, with focus on yields and growth potential.",
-              date: "2024-04-22",
-              author: "Investment Research Division",
-              category: "Investment",
-              isPremium: true,
-              downloadUrl: "#",
-            },
-            {
-              id: 3,
-              title: "First-Time Buyer Guide 2024",
-              summary: "Essential information and advice for first-time buyers navigating the property market in 2024.",
-              date: "2024-03-10",
-              author: "Homebuyer Advisory Team",
-              category: "Guides",
-              isPremium: false,
-              downloadUrl: "#",
-            },
-          ]);
+          setReports(reportData);
           setLoading(false);
         }, 1000);
       } catch (error) {
@@ -65,6 +70,10 @@ const ResearchReports: React.FC<ResearchReportsProps> = ({ user, profile }) => {
   }, []);
 
   const isSubscriber = profile?.subscription_tier !== "free";
+
+  const handleViewReport = (report: any) => {
+    navigate(`/research/reports/${report.slug}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -127,11 +136,12 @@ const ResearchReports: React.FC<ResearchReportsProps> = ({ user, profile }) => {
                     Upgrade to Access
                   </Button>
                 ) : (
-                  <Button className="w-full" asChild>
-                    <a href={report.downloadUrl} download>
-                      <Download className="h-4 w-4 mr-2" />
-                      Download Report
-                    </a>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => handleViewReport(report)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Report
                   </Button>
                 )}
               </CardFooter>

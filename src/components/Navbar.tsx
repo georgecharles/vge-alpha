@@ -173,14 +173,14 @@ function Navbar() {
                       <li>
                         <NavigationMenuLink asChild>
                           <Link
-                            to="/reports"
+                            to="/research-reports"
                             className="block select-none space-y-1 rounded-md p-3 leading-none no-underline outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
                           >
                             <div className="text-sm font-medium leading-none">
-                              Reports
+                              Research & Reports
                             </div>
                             <p className="line-clamp-2 text-sm leading-snug text-muted-foreground">
-                              Access detailed property market reports.
+                              Request and access custom research reports.
                             </p>
                           </Link>
                         </NavigationMenuLink>
@@ -271,6 +271,14 @@ function Navbar() {
                     <DropdownMenuItem asChild>
                       <Link to="/saved">Saved Properties</Link>
                     </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/research-reports">Research & Reports</Link>
+                    </DropdownMenuItem>
+                    {(user.app_metadata?.role === 'admin' || profile?.role === 'admin') && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/admin/reports">Admin Reports</Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout}>
                       Log out

@@ -1,32 +1,35 @@
 import React from 'react';
-import { Layout } from '../components/Layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { LoadingSpinner } from '@/components/ui/loading-spinner';
-import { useToast } from '@/components/ui/use-toast';
-import { Bed, Home, MapPin, Search, Calendar, PoundSterling, TrendingUp, X, ExternalLink, Maximize, AreaChart, ArrowUpRight, ArrowDownRight, Info, SquareIcon, Building, Key } from 'lucide-react';
-import { formatCurrency } from '@/lib/utils';
+import { Layout } from "../components/Layout";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Card } from "../components/ui/card";
+import { LoadingSpinner } from "../components/ui/loading-spinner";
+import { useToast } from "../components/ui/use-toast";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { formatCurrency, cn } from "../lib/utils";
+import { HeroSection } from "../components/HeroSection";
+import EnvironmentDebug from "../components/EnvironmentDebug";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { AskingPrices } from '@/components/AskingPrices';
+} from "../components/ui/select";
 import { 
-  getListedProperties, 
-  getSoldProperties,
-  getPriceHistory,
-  getAskingPrices
-} from '@/lib/patmaService';
-import type { 
-  ListedProperty, 
-  SoldProperty, 
-  PriceHistoryResponse,
-  AskingPricesResponse
-} from '@/lib/patmaService';
+  searchRightmoveProperties, 
+  getPropertyDetails,
+  checkPropertyActiveStatus,
+  type RightmoveProperty,
+  type SearchFilters,
+  ensureScraperCacheTableExists
+} from "../lib/apifyRightmoveScraper";
+import { testSupabaseConnection } from "../lib/supabase";
+import { supabase } from "../lib/supabase";
+import { 
+  PropertyInvestmentAnalysis,
+  analyzePropertyInvestment 
+} from "../lib/geminiService";
 
 interface AskingPricesData {
   postcode: string;
@@ -49,1631 +52,1710 @@ interface Filters {
   newBuild: boolean;
   maxAgeMonths: number;
   sortBy: 'most_recent_sale_date' | 'distance';
+  minPrice?: number;
+  maxPrice?: number;
 }
 
 interface AreaInsights {
-  askingPrices?: AskingPricesResponse;
-  priceHistory?: PriceHistoryResponse;
-  planningApplications?: any;
-  neighborhoodData?: any;
+  postcode: string;
+  averagePrice: number;
+  priceGrowth1Year: number;
+  priceGrowth5Years: number;
+  crimeRate: number;
+  schoolsRating: number;
+  transportRating: number;
 }
 
-export default function Listings() {
-  const [searchTerm, setSearchTerm] = React.useState('');
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [listedProperties, setListedProperties] = React.useState<ListedProperty[]>([]);
-  const [soldProperties, setSoldProperties] = React.useState<SoldProperty[]>([]);
-  const [areaInsights, setAreaInsights] = React.useState<AreaInsights>({});
-  const [viewMode, setViewMode] = React.useState<'listed' | 'sold'>('listed');
-  const [totalResults, setTotalResults] = React.useState(0);
-  const [totalPages, setTotalPages] = React.useState(1);
-  const { toast } = useToast();
+interface PropertySaleHistory {
+  date: string;
+  price: number;
+}
 
-  const [filters, setFilters] = React.useState<Filters>({
-    propertyType: 'any',
-    tenure: 'any',
-    minBeds: '0',
-    radius: 1,
-    page: 1,
-    limit: 12,
-    newBuild: false,
-    maxAgeMonths: 18,
-    sortBy: 'most_recent_sale_date'
-  });
+interface PropertyModalProps {
+  property: RightmoveProperty;
+  onClose: () => void;
+  saleHistoryData?: PropertySaleHistory[];
+  areaInsights?: AreaInsights;
+  investmentAnalysis?: PropertyInvestmentAnalysis | null;
+}
 
-  const [showPricePerSqft, setShowPricePerSqft] = React.useState(true);
-  const [showStampDuty, setShowStampDuty] = React.useState(true);
-  const [showPlanningApplications, setShowPlanningApplications] = React.useState(false);
+// Define a proper interface for the search details
+interface SearchDetails {
+  originalLocation: string;
+  formattedLocation: string;
+  isOutcode: boolean;
+  timestamp: string;
+  cacheBustLocation?: string;
+  searchDurationMs?: number;
+  propertiesFound?: number;
+  zeroPriceCount?: number;
+  missingAddressCount?: number;
+}
 
-  const [selectedProperty, setSelectedProperty] = React.useState<ListedProperty | SoldProperty | null>(null);
-  const [isModalOpen, setIsModalOpen] = React.useState(false);
-
-  const displayProperties = React.useMemo(() => {
-    return viewMode === 'listed' ? listedProperties : soldProperties;
-  }, [viewMode, listedProperties, soldProperties]);
-
-  const fetchAreaInsights = async (postcode: string) => {
-    try {
-      const [askingPrices, priceHistory] = await Promise.all([
-        getAskingPrices({
-          postcode,
-          property_type: filters.propertyType === 'any' ? undefined : filters.propertyType,
-          bedrooms: filters.minBeds === '0' ? undefined : parseInt(filters.minBeds),
-          radius: filters.radius
-        }),
-        getPriceHistory({
-          postcode,
-          property_type: filters.propertyType === 'any' ? undefined : filters.propertyType,
-          max_age_months: filters.maxAgeMonths
-        }),
-        // Add more API calls here when we have the corresponding functions in patmaService.ts
-        // For example:
-        // getPlanningApplications({ postcode, radius: filters.radius }),
-        // getNeighborhoodData({ postcode })
-      ]);
-
-      setAreaInsights({
-        askingPrices,
-        priceHistory,
-        // When we implement the additional API calls:
-        // planningApplications,
-        // neighborhoodData
-      });
-    } catch (error) {
-      console.error('Error fetching area insights:', error);
-    }
-  };
-
-  // Function to get a property image from various potential sources
-  const getPropertyImageUrl = (property: any): string | null => {
-    // Check if we already have a direct image URL from the API
-    if (property.image_url && typeof property.image_url === 'string' && property.image_url.trim() !== '') {
-      console.log('Using direct image URL from API');
-      return property.image_url;
-    }
-    
-    // Check for image URLs in common property fields
-    const possibleImageFields = [
-      'main_image', 
-      'photo_url', 
-      'thumbnail',
-      'image'
-    ];
-    
-    for (const field of possibleImageFields) {
-      if (property[field] && typeof property[field] === 'string' && property[field].trim() !== '') {
-        console.log(`Found image in property.${field}`);
-        return property[field];
-      }
-    }
-    
-    // Look for property-software.uk URLs in any string field
-    // This approach scans all string properties for PaTMa image URLs
-    for (const key in property) {
-      if (typeof property[key] === 'string' && 
-          property[key].includes('property-software.uk') && 
-          (property[key].endsWith('.jpg') || property[key].endsWith('.jpeg') || property[key].endsWith('.png'))) {
-        console.log(`Found PaTMa image URL in property.${key}`);
-        return property[key];
-      }
-    }
-    
-    // Check if we have images/photos arrays
-    if (property.images && Array.isArray(property.images) && property.images.length > 0) {
-      // Try to find a property-software.uk URL first
-      const patmaImage = property.images.find((img: any) => 
-        typeof img === 'string' && img.includes('property-software.uk')
-      );
-      
-      if (patmaImage) {
-        console.log('Found PaTMa image URL in images array');
-        return patmaImage;
-      }
-      
-      // Fallback to the first image
-      if (typeof property.images[0] === 'string') {
-        console.log('Using first image from images array');
-        return property.images[0];
-      }
-      
-      // Check if images contain objects with URLs
-      if (property.images[0] && typeof property.images[0] === 'object' && property.images[0].url) {
-        console.log('Using URL from first image object in images array');
-        return property.images[0].url;
-      }
-    }
-    
-    // Same check for photos array
-    if (property.photos && Array.isArray(property.photos) && property.photos.length > 0) {
-      const patmaPhoto = property.photos.find((img: any) => 
-        typeof img === 'string' && img.includes('property-software.uk')
-      );
-      
-      if (patmaPhoto) {
-        console.log('Found PaTMa image URL in photos array');
-        return patmaPhoto;
-      }
-      
-      if (typeof property.photos[0] === 'string') {
-        console.log('Using first image from photos array');
-        return property.photos[0];
-      }
-      
-      if (property.photos[0] && typeof property.photos[0] === 'object' && property.photos[0].url) {
-        console.log('Using URL from first image object in photos array');
-        return property.photos[0].url;
-      }
-    }
-    
-    // Check sold_history for images
-    if (property.sold_history && Array.isArray(property.sold_history) && property.sold_history.length > 0) {
-      for (const historyItem of property.sold_history) {
-        if (!historyItem) continue;
-        
-        // Check for direct image fields in history item
-        for (const field of possibleImageFields) {
-          if (historyItem[field] && typeof historyItem[field] === 'string' && historyItem[field].trim() !== '') {
-            console.log(`Found image in sold_history item.${field}`);
-            return historyItem[field];
-          }
-        }
-        
-        // Check for property-software.uk URLs in any string field
-        for (const key in historyItem) {
-          if (typeof historyItem[key] === 'string' && 
-              historyItem[key].includes('property-software.uk') && 
-              (historyItem[key].endsWith('.jpg') || historyItem[key].endsWith('.jpeg') || historyItem[key].endsWith('.png'))) {
-            console.log(`Found PaTMa image URL in sold_history item.${key}`);
-            return historyItem[key];
-          }
-        }
-        
-        // Check arrays in history item
-        if (historyItem.images && Array.isArray(historyItem.images) && historyItem.images.length > 0) {
-          const patmaImage = historyItem.images.find((img: any) => 
-            typeof img === 'string' && img.includes('property-software.uk')
-          );
-          
-          if (patmaImage) {
-            console.log('Found PaTMa image URL in sold_history images array');
-            return patmaImage;
-          }
-          
-          if (typeof historyItem.images[0] === 'string') {
-            console.log('Using first image from sold_history images array');
-            return historyItem.images[0];
-          }
-        }
-      }
-    }
-    
-    // If no image was found, return null
-    console.log('No image found for property');
-    return null;
-  };
-
-  const handleSearch = async () => {
-    if (!searchTerm) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Please enter a location or postcode",
-      });
-      return;
-    }
-
-    try {
-      setIsLoading(true);
-
-      // Check if the search term is a postcode (simple validation)
-      const isPostcode = /^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$/i.test(searchTerm.trim());
-      
-      // For area insights, we'll still try to use the search term as a postcode
-      // Fetch area insights in parallel with property search
-      fetchAreaInsights(searchTerm).catch(error => {
-        console.error('Error fetching area insights:', error);
-        toast({
-          variant: "destructive",
-          title: "Warning",
-          description: "Could not fetch area insights. Some information may be missing.",
-        });
-      });
-
-      if (viewMode === 'listed') {
-        try {
-          const listedResults = await getListedProperties({
-            postcode: searchTerm.trim(),
-            // If it doesn't look like a postcode, also pass it as a location
-            location: !isPostcode ? searchTerm.trim() : undefined,
-            radius: filters.radius,
-            property_type: filters.propertyType === 'any' ? undefined : filters.propertyType,
-            tenure: filters.tenure === 'any' ? undefined : filters.tenure,
-            bedrooms: filters.minBeds === '0' ? undefined : parseInt(filters.minBeds),
-            new_build: filters.newBuild || undefined,
-            page: filters.page,
-            page_size: filters.limit,
-            sort_by: filters.sortBy,
-            include_sold_history: true,
-            require_sold_price: true,
-            require_size: true
-          });
-          
-          // Print the ENTIRE API response structure - this is critical to find the images
-          console.log('COMPLETE API RESPONSE STRUCTURE:', JSON.stringify(listedResults, null, 2));
-          
-          const sampleProperty = listedResults.properties[0];
-          if (sampleProperty) {
-            console.log('COMPLETE SAMPLE PROPERTY STRUCTURE:', JSON.stringify(sampleProperty, null, 2));
-            
-            // Check for property URLs and IDs that might help find listings
-            console.log('KEY PROPERTY FIELDS FOR IMAGE LOOKUP:', {
-              listing_url: sampleProperty.listing_url,
-              property_url: sampleProperty.property_url,
-              url: sampleProperty.url,
-              id: sampleProperty.id,
-              rightmove_id: sampleProperty.rightmove_id,
-              zoopla_id: sampleProperty.zoopla_id,
-              uprn: sampleProperty.uprn,
-              listing_detail_url: sampleProperty.listing_detail_url
-            });
-          }
-          
-          // Process properties to extract and normalize data
-          const processedProperties = listedResults.properties.map((property: any, index: number) => {
-            // Deep copy to avoid mutation issues
-            let normalizedProperty = JSON.parse(JSON.stringify(property));
-            
-            // Ensure property ID is available in a consistent format
-            if (property.uprn) {
-              normalizedProperty.uprn = String(property.uprn);
-            }
-            
-            // PRICE HANDLING - use last_sold_price when available
-            if (property.last_sold_price) {
-              normalizedProperty.price = property.last_sold_price;
-            }
-            
-            // Find the best image URL for this property
-            normalizedProperty.image_url = getPropertyImageUrl(property);
-                        
-            // Ensure property_type is always set
-            if (!normalizedProperty.property_type && property.built_form) {
-              normalizedProperty.property_type = property.built_form;
-            } else if (!normalizedProperty.property_type) {
-              normalizedProperty.property_type = "House";
-            }
-            
-            return normalizedProperty;
-          });
-
-          // Add investment metrics if not provided by the API
-          const propertiesWithMetrics = processedProperties.map((property: any) => 
-            addInvestmentMetrics(property)
-          );
-          
-          setListedProperties(propertiesWithMetrics);
-          setTotalResults(listedResults.total);
-          setTotalPages(listedResults.totalPages);
-          
-          if (listedResults.properties.length === 0) {
-            toast({
-              variant: "default",
-              title: "No Results",
-              description: "No listed properties found for this search criteria. Try adjusting your filters.",
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching listed properties:', error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: error instanceof Error ? error.message : "Could not fetch listed properties. Please check your search criteria and try again.",
-          });
-          setListedProperties([]);
-          setTotalResults(0);
-          setTotalPages(1);
-        }
-      } else {
-        try {
-          const soldResults = await getSoldProperties({
-            postcode: searchTerm.trim(),
-            // If it doesn't look like a postcode, also pass it as a location
-            location: !isPostcode ? searchTerm.trim() : undefined,
-            radius: filters.radius,
-            property_type: filters.propertyType === 'any' ? 'flat' : filters.propertyType as any,
-            tenure: filters.tenure === 'any' ? undefined : filters.tenure,
-            max_age_months: filters.maxAgeMonths,
-            min_data_points: 20,
-            apply_indexation: true,
-            page: filters.page,
-            page_size: filters.limit
-          });
-          
-          // Log full response structure
-          console.log('Sold properties API response structure:', JSON.stringify(soldResults, null, 2).substring(0, 500) + '...');
-          if (soldResults.properties && soldResults.properties.length > 0) {
-            console.log('First sold property full object:', soldResults.properties[0]);
-          }
-          
-          // Process properties to normalize data structures and fix missing fields
-          const processedProperties = soldResults.properties.map((property: any) => {
-            // Create a deep copy to avoid mutation issues
-            let normalizedProperty = JSON.parse(JSON.stringify(property));
-            
-            // PRICE HANDLING
-            // Check all possible price field locations
-            if (!normalizedProperty.price && !normalizedProperty.sale_price) {
-              if (property.details?.price) {
-                normalizedProperty.price = property.details.price;
-              } else if (property.price_paid) {
-                normalizedProperty.sale_price = property.price_paid;
-              } else if (property.sale_price) {
-                normalizedProperty.sale_price = property.sale_price;
-              } else if (property.latest_sold_price) {
-                normalizedProperty.sale_price = property.latest_sold_price;
-              } else if (typeof property.price === 'string') {
-                // Sometimes price comes as a string with currency symbol
-                const priceMatch = property.price.match(/[\d,]+/);
-                if (priceMatch) {
-                  normalizedProperty.price = parseInt(priceMatch[0].replace(/,/g, ''));
-                }
-              }
-            }
-            
-            // Ensure we have a numeric price
-            if (normalizedProperty.sale_price && typeof normalizedProperty.sale_price === 'string') {
-              const priceMatch = normalizedProperty.sale_price.match(/[\d,]+/);
-              if (priceMatch) {
-                normalizedProperty.sale_price = parseInt(priceMatch[0].replace(/,/g, ''));
-              }
-            }
-
-            // IMAGE HANDLING - Use the same image getter for sold properties
-            normalizedProperty.image_url = getPropertyImageUrl(property);
-            
-            return normalizedProperty;
-          });
-          
-          // Add investment metrics if not provided by the API
-          const propertiesWithMetrics = processedProperties.map((property: any) => 
-            addInvestmentMetrics(property)
-          );
-          
-          setSoldProperties(propertiesWithMetrics);
-          setTotalResults(soldResults.total);
-          setTotalPages(soldResults.totalPages);
-          
-          if (soldResults.properties.length === 0) {
-            toast({
-              variant: "default",
-              title: "No Results",
-              description: "No sold properties found for this search criteria. Try adjusting your filters.",
-            });
-          }
-        } catch (error) {
-          console.error('Error fetching sold properties:', error);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: error instanceof Error ? error.message : "Could not fetch sold properties. Please check your search criteria and try again.",
-          });
-          setSoldProperties([]);
-          setTotalResults(0);
-          setTotalPages(1);
-        }
-      }
-
-    } catch (error) {
-      console.error('Search error:', error);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred. Please try again.",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Function to calculate investment metrics if they're not provided by the API
-  const addInvestmentMetrics = <T extends ListedProperty | SoldProperty>(property: T): T => {
-    const propertyWithMetrics = { ...property };
-    
-    // Determine the actual price from various possible fields
-    const price = 
-      propertyWithMetrics.price || 
-      propertyWithMetrics.asking_price || 
-      propertyWithMetrics.sale_price || 
-      (propertyWithMetrics as any).price_paid ||
-      (propertyWithMetrics as any).latest_price ||
-      0;
-    
-    if (price > 0) {
-      // Calculate stamp duty (assuming standard purchase)
-      if (!propertyWithMetrics.stamp_duty) {
-        propertyWithMetrics.stamp_duty = calculateStampDuty(price);
-      }
-      
-      // Calculate price per square foot if size data is available
-      if (propertyWithMetrics.size_sq_meters && !propertyWithMetrics.price_per_sqft) {
-        propertyWithMetrics.price_per_sqft = calculatePricePerSqft(price, propertyWithMetrics.size_sq_meters, true);
-      } else if (propertyWithMetrics.size_sq_feet && !propertyWithMetrics.price_per_sqft) {
-        propertyWithMetrics.price_per_sqft = calculatePricePerSqft(price, propertyWithMetrics.size_sq_feet, false);
-      }
-      
-      // Only calculate rent estimates if not already provided
-      if (!propertyWithMetrics.estimated_rent) {
-        // Basic rent calculation (very simplified)
-        // In reality, this would be based on location, property type, size, etc.
-        let monthlyRentEstimate = 0;
-        
-        // Rough estimate based on property type and UK averages
-        // Typically annual rent is 3-5% of property value
-        const rentYieldFactor = 0.04; // 4% annual yield
-        const annualRent = price * rentYieldFactor;
-        monthlyRentEstimate = annualRent / 12;
-        
-        // Adjust based on bedrooms if available
-        if (propertyWithMetrics.bedrooms) {
-          // Slight adjustment based on number of bedrooms
-          const bedroomFactor = 1 + (propertyWithMetrics.bedrooms - 2) * 0.1; // 10% per bedroom difference from 2
-          monthlyRentEstimate *= Math.max(0.8, Math.min(bedroomFactor, 1.5)); // Cap between 0.8x and 1.5x
-        }
-        
-        propertyWithMetrics.estimated_rent = Math.round(monthlyRentEstimate);
-        
-        // Calculate rental yield
-        if (!propertyWithMetrics.rental_yield) {
-          const annualRent = propertyWithMetrics.estimated_rent * 12;
-          propertyWithMetrics.rental_yield = (annualRent / price) * 100;
-        }
-        
-        // Calculate ROI (simplified)
-        if (!propertyWithMetrics.roi) {
-          // Assume 5-year holding period with 3% annual price appreciation
-          const annualAppreciation = 0.03;
-          const holdingYears = 5;
-          const futureValue = price * Math.pow(1 + annualAppreciation, holdingYears);
-          const totalRent = propertyWithMetrics.estimated_rent * 12 * holdingYears;
-          const totalReturn = (futureValue - price) + totalRent;
-          propertyWithMetrics.roi = (totalReturn / price) * 100;
-        }
-        
-        // Estimated annual growth
-        if (!propertyWithMetrics.estimated_growth) {
-          // Based on historical UK property price growth
-          propertyWithMetrics.estimated_growth = 3.5;
-        }
-      }
-    }
-    
-    return propertyWithMetrics;
-  };
-
-  // Function to get a fallback image based on property type
-  const getPropertyTypeImage = (propertyType: string): string => {
-    // Convert to lowercase and handle variations
-    const type = propertyType?.toLowerCase() || '';
-    
-    if (type.includes('flat') || type.includes('apartment')) {
-      return '/images/property-types/flat.jpg';
-    } else if (type.includes('terrace') || type.includes('terraced')) {
-      return '/images/property-types/terraced.jpg';
-    } else if (type.includes('semi') || type.includes('semi-detached')) {
-      return '/images/property-types/semi-detached.jpg';
-    } else if (type.includes('detached')) {
-      return '/images/property-types/detached.jpg';
-    } else if (type.includes('bungalow')) {
-      return '/images/property-types/bungalow.jpg';
-    } else if (type.includes('house')) {
-      return '/images/property-types/house.jpg';
-    }
-    
-    // Default fallback
-    return '/images/property-types/house.jpg';
-  };
-
-  // Add a function to calculate stamp duty
-  const calculateStampDuty = (price: number, isBuyToLet: boolean = false, isFirstTimeBuyer: boolean = false) => {
-    // UK Stamp Duty rates as of 2023
-    if (price <= 0) return 0;
-    
-    let stampDuty = 0;
-    
-    if (isFirstTimeBuyer) {
-      // First-time buyer rates
-      if (price <= 425000) {
-        stampDuty = 0;
-      } else if (price <= 625000) {
-        stampDuty = (price - 425000) * 0.05;
-      } else {
-        // First-time buyers purchasing property over £625,000 don't get relief
-        isFirstTimeBuyer = false;
-      }
-    }
-    
-    if (!isFirstTimeBuyer) {
-      // Standard rates
-      if (price <= 250000) {
-        stampDuty = 0;
-      } else if (price <= 925000) {
-        stampDuty = (price - 250000) * 0.05;
-      } else if (price <= 1500000) {
-        stampDuty = (price - 925000) * 0.1 + (925000 - 250000) * 0.05;
-      } else {
-        stampDuty = (price - 1500000) * 0.12 + (1500000 - 925000) * 0.1 + (925000 - 250000) * 0.05;
-      }
-    }
-    
-    // Additional rate for buy-to-let/second homes
-    if (isBuyToLet) {
-      stampDuty += price * 0.03;
-    }
-    
-    return Math.round(stampDuty);
-  };
+// Add these styles at the top of the file, after the imports
+const animationStyles = `
+  @keyframes fadein {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
   
-  // Add a utility function to calculate price per square foot/meter
-  const calculatePricePerSqft = (price: number, size: number, isMetric: boolean = false) => {
-    if (!price || !size || size <= 0) return null;
-    
-    if (isMetric) {
-      // Price per square meter
-      return Math.round(price / size);
-    } else {
-      // Price per square foot (convert from square meters if necessary)
-      const sizeInSqft = isMetric ? size * 10.764 : size;
-      return Math.round(price / sizeInSqft);
-    }
-  };
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  .animate-fadein {
+    animation: fadein 0.5s ease-in;
+  }
+  
+  .animate-pulse {
+    animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+`;
 
-  React.useEffect(() => {
-    if (searchTerm) {
-      handleSearch();
-    }
-  }, [viewMode, filters.page]);
-
-  // Ensure we have a valid property type when switching to sold properties view
-  React.useEffect(() => {
-    if (viewMode === 'sold' && filters.propertyType === 'any') {
-      setFilters(prev => ({ ...prev, propertyType: 'flat' }));
-    }
-  }, [viewMode, filters.propertyType]);
-
-  // Filter handlers
-  const handlePropertyTypeChange = (value: PropertyType) => {
-    setFilters(prev => ({ ...prev, propertyType: value, page: 1 }));
-  };
-
-  const handleTenureChange = (value: PropertyTenure) => {
-    setFilters(prev => ({ ...prev, tenure: value, page: 1 }));
-  };
-
-  const handleBedroomsChange = (value: string) => {
-    setFilters(prev => ({ ...prev, minBeds: value, page: 1 }));
-  };
-
-  const handleRadiusChange = (value: string) => {
-    setFilters(prev => ({ ...prev, radius: parseFloat(value), page: 1 }));
-  };
-
-  const handleSortChange = (value: typeof filters.sortBy) => {
-    setFilters(prev => ({ ...prev, sortBy: value, page: 1 }));
-  };
-
-  // Function to open the property modal
-  const openPropertyModal = (property: ListedProperty | SoldProperty) => {
-    setSelectedProperty(property);
-    setIsModalOpen(true);
-  };
-
-  // Function to close the property modal
-  const closePropertyModal = () => {
-    setIsModalOpen(false);
-    // Keep the property data for a moment to avoid UI jumps during the closing animation
-    setTimeout(() => setSelectedProperty(null), 300);
-  };
-
-  // Add a property details modal component
-  const PropertyModal = () => {
-    if (!selectedProperty) return null;
-    
-    const price = 
-      selectedProperty.price || 
-      selectedProperty.asking_price || 
-      selectedProperty.sale_price || 
-      (selectedProperty as any).price_paid ||
-      (selectedProperty as any).latest_price || 
-      0;
-      
-    const isSoldProperty = 'date_of_transfer' in selectedProperty;
-    const isListedProperty = !isSoldProperty;
-    
-    // Just use the image URL from the property, no fallbacks
-    const imageUrl = selectedProperty.image_url;
-    
-    // Format postcode with fallback
-    const displayPostcode = selectedProperty.postcode || 
-                          (selectedProperty.address && selectedProperty.address.match(/[A-Z]{1,2}[0-9][0-9A-Z]?\s?[0-9][A-Z]{2}/i)?.[0]) || 
-                          "Not Available";
-    
-    // Extract sale history data for chart
-    const hasSaleHistory = selectedProperty.sold_history && selectedProperty.sold_history.length > 0;
-    const saleHistoryData = hasSaleHistory 
-      ? selectedProperty.sold_history
-          .filter((sale: any) => sale && sale.date && !isNaN(new Date(sale.date).getTime()) && sale.price && !isNaN(parseFloat(String(sale.price))))
-          .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-      : [];
-    
-    // Calculate price growth percentage if multiple sales
-    const priceGrowth = saleHistoryData.length >= 2 
-      ? ((saleHistoryData[saleHistoryData.length - 1].price - saleHistoryData[0].price) / saleHistoryData[0].price) * 100
-      : null;
-    
-    // Simple mortgage calculation (very basic)
-    const calculateMortgage = (propertyPrice: number, downPaymentPercent: number = 25, interestRate: number = 4.5, termYears: number = 25) => {
-      const downPayment = propertyPrice * (downPaymentPercent / 100);
-      const loanAmount = propertyPrice - downPayment;
-      const monthlyInterest = interestRate / 100 / 12;
-      const totalPayments = termYears * 12;
-      
-      const monthlyPayment = loanAmount * (
-        monthlyInterest * Math.pow(1 + monthlyInterest, totalPayments)
-      ) / (
-        Math.pow(1 + monthlyInterest, totalPayments) - 1
-      );
-      
-      return {
-        downPayment,
-        loanAmount,
-        monthlyPayment,
-        totalPayments,
-        totalRepayment: monthlyPayment * totalPayments
-      };
-    };
-    
-    // Only calculate if we have a valid price
-    const mortgageDetails = price > 0 ? calculateMortgage(price) : null;
-    
+const PropertyModal = ({ 
+  property, 
+  onClose, 
+  saleHistoryData = [], 
+  areaInsights,
+  investmentAnalysis 
+}: PropertyModalProps) => {
+  // Safety check - if property is undefined or null, render fallback UI
+  if (!property) {
     return (
-      <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 ${isModalOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'} transition-opacity duration-300`}>
-        {/* Modal backdrop */}
-        <div className="absolute inset-0 bg-black/60" onClick={closePropertyModal} />
-        
-        {/* Modal content */}
-        <div className="relative bg-white rounded-lg shadow-xl max-w-5xl w-full max-h-[90vh] overflow-hidden flex flex-col">
-          {/* Close button */}
-          <button 
-            onClick={closePropertyModal}
-            className="absolute top-4 right-4 z-10 bg-white/80 p-1 rounded-full hover:bg-white transition-colors"
-          >
-            <X className="h-6 w-6" />
-          </button>
-          
-          <div className="flex flex-col md:flex-row h-full overflow-hidden">
-            {/* Property image(s) */}
-            <div className="w-full md:w-2/5 h-64 md:h-auto relative bg-gray-100">
-              {imageUrl ? (
-                <img 
-                  src={imageUrl}
-                  alt={selectedProperty.address || "Property"}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center">
-                  <Home className="h-16 w-16 text-gray-300" />
-                  <p className="text-gray-400 text-sm mt-2">No image available</p>
-                </div>
-              )}
-              
-              {/* Property type badge */}
-              <div className="absolute top-4 left-4">
-                <span className="bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium">
-                  {selectedProperty.property_type}
-                </span>
-              </div>
-              
-              {/* External link if available */}
-              {selectedProperty.listing_url && (
-                <a 
-                  href={selectedProperty.listing_url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="absolute bottom-4 left-4 bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 hover:bg-white transition-colors"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  View Listing
-                </a>
-              )}
-            </div>
-            
-            {/* Property details */}
-            <div className="w-full md:w-3/5 p-6 overflow-y-auto">
-              <h2 className="text-xl font-bold mb-2">{selectedProperty.address}</h2>
-              <p className="text-3xl font-bold mb-4 text-emerald-600">
-                {formatCurrency(price)}
-              </p>
-              
-              {/* Key property details */}
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-                <div className="flex flex-col">
-                  <span className="text-sm text-gray-500">Property Type</span>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Building className="h-4 w-4 text-gray-600" />
-                    <span className="font-medium">{selectedProperty.property_type || 'N/A'}</span>
-                  </div>
-                </div>
-                
-                {selectedProperty.bedrooms && (
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-500">Bedrooms</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Bed className="h-4 w-4 text-gray-600" />
-                      <span className="font-medium">{selectedProperty.bedrooms}</span>
-                    </div>
-                  </div>
-                )}
-                
-                {selectedProperty.bathrooms && (
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-500">Bathrooms</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      <div className="h-4 w-4 text-gray-600 flex items-center justify-center">🛁</div>
-                      <span className="font-medium">{selectedProperty.bathrooms}</span>
-                    </div>
-                  </div>
-                )}
-                
-                <div className="flex flex-col">
-                  <span className="text-sm text-gray-500">Postcode</span>
-                  <div className="flex items-center gap-1 mt-1">
-                    <MapPin className="h-4 w-4 text-gray-600" />
-                    <span className="font-medium">{displayPostcode}</span>
-                  </div>
-                </div>
-                
-                <div className="flex flex-col">
-                  <span className="text-sm text-gray-500">Tenure</span>
-                  <div className="flex items-center gap-1 mt-1">
-                    <Key className="h-4 w-4 text-gray-600" />
-                    <span className="font-medium">{selectedProperty.tenure || 'N/A'}</span>
-                  </div>
-                </div>
-                
-                {isSoldProperty && (
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-500">Sold Date</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      <Calendar className="h-4 w-4 text-gray-600" />
-                      <span className="font-medium">
-                        {new Date((selectedProperty as SoldProperty).date_of_transfer).toLocaleDateString()}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                
-                {(selectedProperty.size_sq_feet || selectedProperty.size_sq_meters) && (
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-500">Size</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      <SquareIcon className="h-4 w-4 text-gray-600" />
-                      <span className="font-medium">
-                        {selectedProperty.size_sq_feet ? `${selectedProperty.size_sq_feet} sq.ft` : ''}
-                        {selectedProperty.size_sq_meters ? `${selectedProperty.size_sq_meters} m²` : ''}
-                      </span>
-                    </div>
-                  </div>
-                )}
-                
-                {selectedProperty.price_per_sqft && (
-                  <div className="flex flex-col">
-                    <span className="text-sm text-gray-500">Price per sq.ft</span>
-                    <div className="flex items-center gap-1 mt-1">
-                      <PoundSterling className="h-4 w-4 text-gray-600" />
-                      <span className="font-medium">{formatCurrency(selectedProperty.price_per_sqft)}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Investment dashboard section */}
-              <div className="mb-6 bg-gray-50 p-4 rounded-lg border border-gray-100">
-                <h3 className="text-lg font-semibold mb-3 flex items-center">
-                  <TrendingUp className="h-5 w-5 mr-2 text-emerald-600" />
-                  Investment Dashboard
-                </h3>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* ROI and Yield Section */}
-                  <div className="space-y-4">
-                    {selectedProperty.estimated_rent && (
-                      <div className="bg-blue-50 p-3 rounded">
-                        <p className="text-blue-800 text-sm font-medium">Estimated Monthly Rent</p>
-                        <p className="text-blue-600 text-lg font-bold mt-1">
-                          {formatCurrency(selectedProperty.estimated_rent)}/month
-                        </p>
-                        {selectedProperty.rental_yield && (
-                          <p className="text-blue-600 text-sm mt-1">
-                            {selectedProperty.rental_yield.toFixed(1)}% yield
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    
-                    {selectedProperty.roi && (
-                      <div className="bg-purple-50 p-3 rounded">
-                        <p className="text-purple-800 text-sm font-medium">5-Year ROI Estimate</p>
-                        <p className="text-purple-600 text-lg font-bold mt-1">
-                          {selectedProperty.roi.toFixed(1)}%
-                        </p>
-                        {selectedProperty.estimated_growth && (
-                          <p className="text-purple-600 text-sm mt-1">
-                            {selectedProperty.estimated_growth.toFixed(1)}% annual growth
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Mortgage Calculator Section */}
-                  {mortgageDetails && (
-                    <div className="bg-emerald-50 p-3 rounded">
-                      <p className="text-emerald-800 text-sm font-medium">Mortgage Estimate (25% deposit)</p>
-                      <p className="text-emerald-600 text-lg font-bold mt-1">
-                        {formatCurrency(mortgageDetails.monthlyPayment)}/month
-                      </p>
-                      <div className="mt-2 text-sm text-emerald-700 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Deposit (25%):</span>
-                          <span>{formatCurrency(mortgageDetails.downPayment)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Loan amount:</span>
-                          <span>{formatCurrency(mortgageDetails.loanAmount)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Term:</span>
-                          <span>25 years at 4.5%</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Cash Flow Analysis */}
-                {selectedProperty.estimated_rent && mortgageDetails && (
-                  <div className="mt-4 bg-white p-3 rounded border border-gray-100">
-                    <p className="text-gray-800 text-sm font-medium">Monthly Cash Flow Analysis</p>
-                    <div className="mt-2 space-y-1 text-sm">
-                      <div className="flex justify-between">
-                        <span>Rental Income:</span>
-                        <span className="text-emerald-600">+{formatCurrency(selectedProperty.estimated_rent)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Mortgage Payment:</span>
-                        <span className="text-red-600">-{formatCurrency(mortgageDetails.monthlyPayment)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Management (10%):</span>
-                        <span className="text-red-600">-{formatCurrency(selectedProperty.estimated_rent * 0.1)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Maintenance (5%):</span>
-                        <span className="text-red-600">-{formatCurrency(selectedProperty.estimated_rent * 0.05)}</span>
-                      </div>
-                      <div className="flex justify-between font-bold pt-2 border-t border-gray-100 mt-2">
-                        <span>Net Cash Flow:</span>
-                        <span className={`${selectedProperty.estimated_rent - mortgageDetails.monthlyPayment - selectedProperty.estimated_rent * 0.15 > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {formatCurrency(selectedProperty.estimated_rent - mortgageDetails.monthlyPayment - selectedProperty.estimated_rent * 0.15)}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-              
-              {/* Purchase costs breakdown */}
-              {selectedProperty.stamp_duty !== undefined && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3">Purchase Costs</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-amber-50 p-3 rounded">
-                      <p className="text-amber-800 text-sm font-medium">Stamp Duty</p>
-                      <p className="text-amber-600 text-lg font-bold mt-1">
-                        {formatCurrency(selectedProperty.stamp_duty)}
-                      </p>
-                      <p className="text-amber-700 text-xs mt-2">
-                        First-time buyer? You may qualify for lower rates.
-                      </p>
-                    </div>
-                    
-                    <div className="bg-emerald-50 p-3 rounded">
-                      <p className="text-emerald-800 text-sm font-medium">Total Purchase Cost</p>
-                      <p className="text-emerald-600 text-lg font-bold mt-1">
-                        {formatCurrency(price + (selectedProperty.stamp_duty || 0))}
-                      </p>
-                      <div className="mt-2 text-sm text-emerald-700 space-y-1">
-                        <div className="flex justify-between">
-                          <span>Property price:</span>
-                          <span>{formatCurrency(price)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Stamp duty:</span>
-                          <span>{formatCurrency(selectedProperty.stamp_duty || 0)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span>Legal fees (est.):</span>
-                          <span>{formatCurrency(1500)}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {/* Area insights with visualization */}
-              {areaInsights.priceHistory?.data?.trend_percentage !== undefined && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center">
-                    <AreaChart className="h-5 w-5 mr-2 text-blue-600" />
-                    Area Insights
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-cyan-50 p-3 rounded">
-                      <p className="text-cyan-800 text-sm font-medium">Area Price Trend</p>
-                      <div className="flex items-center gap-1 mt-1">
-                        {areaInsights.priceHistory.data.trend_percentage > 0 ? (
-                          <ArrowUpRight className="h-5 w-5 text-emerald-600" />
-                        ) : (
-                          <ArrowDownRight className="h-5 w-5 text-red-600" />
-                        )}
-                        <p className={`text-lg font-bold ${areaInsights.priceHistory.data.trend_percentage > 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {areaInsights.priceHistory.data.trend_percentage.toFixed(1)}%
-                        </p>
-                      </div>
-                      <p className="text-cyan-600 text-sm mt-1">Last 12 months</p>
-                      
-                      {/* Add simple visual trend indicator */}
-                      <div className="mt-3 h-10 bg-white rounded overflow-hidden">
-                        <div 
-                          className={`h-full ${areaInsights.priceHistory.data.trend_percentage > 0 ? 'bg-emerald-500' : 'bg-red-500'}`}
-                          style={{ width: `${Math.min(Math.abs(areaInsights.priceHistory.data.trend_percentage) * 3, 100)}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                    
-                    {areaInsights.askingPrices?.data?.mean && (
-                      <div className="bg-teal-50 p-3 rounded">
-                        <p className="text-teal-800 text-sm font-medium">Average Area Price</p>
-                        <p className="text-teal-600 text-lg font-bold mt-1">
-                          {formatCurrency(areaInsights.askingPrices.data.mean)}
-                        </p>
-                        {price > 0 && (
-                          <div>
-                            <p className="text-teal-600 text-sm mt-1">
-                              This property is <strong>{price < areaInsights.askingPrices.data.mean ? 'below' : 'above'}</strong> average
-                            </p>
-                            
-                            {/* Add visual price comparison */}
-                            <div className="mt-3 relative h-10 bg-gray-100 rounded overflow-hidden">
-                              <div className="absolute inset-0 flex">
-                                <div className="h-full bg-teal-200" style={{ width: '50%' }}></div>
-                                <div className="h-full bg-teal-300" style={{ width: '50%' }}></div>
-                              </div>
-                              <div 
-                                className="absolute top-0 h-full w-1 bg-black"
-                                style={{ 
-                                  left: '50%',
-                                  transform: 'translateX(-50%)'
-                                }}
-                              ></div>
-                              <div 
-                                className="absolute top-0 h-full w-2 bg-emerald-600 rounded"
-                                style={{ 
-                                  left: `${Math.min(Math.max((price / areaInsights.askingPrices.data.mean) * 50, 10), 90)}%`,
-                                  transform: 'translateX(-50%)'
-                                }}
-                              ></div>
-                            </div>
-                            <div className="flex justify-between text-xs mt-1 text-gray-600">
-                              <span>-50%</span>
-                              <span>Average</span>
-                              <span>+50%</span>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-              
-              {/* Additional property details if available */}
-              {selectedProperty.description && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-2">Description</h3>
-                  <p className="text-gray-600">{selectedProperty.description}</p>
-                </div>
-              )}
-              
-              {/* If there are sold history records, show them with visualization */}
-              {hasSaleHistory && saleHistoryData.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3 flex items-center">
-                    <TrendingUp className="h-5 w-5 mr-2 text-amber-600" />
-                    Sale History
-                  </h3>
-                  
-                  {/* Add price growth indicator if we have multiple sales */}
-                  {priceGrowth !== null && (
-                    <div className="mb-3 p-3 rounded bg-amber-50">
-                      <div className="flex items-center">
-                        <span className="text-amber-800 text-sm mr-2">Total Price Growth:</span>
-                        <span className={`font-bold ${priceGrowth >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
-                          {priceGrowth >= 0 ? '+' : ''}{priceGrowth.toFixed(1)}%
-                        </span>
-                      </div>
-                      
-                      {/* Add time period */}
-                      {saleHistoryData.length >= 2 && (
-                        <div className="text-xs text-amber-700 mt-1">
-                          Over {Math.round((new Date(saleHistoryData[saleHistoryData.length - 1].date).getTime() - 
-                                          new Date(saleHistoryData[0].date).getTime()) / 
-                                          (1000 * 60 * 60 * 24 * 365))} years 
-                          ({new Date(saleHistoryData[0].date).getFullYear()} to {new Date(saleHistoryData[saleHistoryData.length - 1].date).getFullYear()})
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
-                  {/* Price history visualization */}
-                  {saleHistoryData.length >= 2 && (
-                    <div className="mb-4 bg-white p-3 rounded border border-gray-100">
-                      <div className="h-32 relative">
-                        {/* Simple chart visualization */}
-                        <div className="absolute bottom-0 left-0 right-0 flex items-end h-full">
-                          {saleHistoryData.map((sale: any, idx: number) => {
-                            const maxPrice = Math.max(...saleHistoryData.map((s: any) => s.price));
-                            const height = (sale.price / maxPrice) * 100;
-                            const width = `${100 / saleHistoryData.length}%`;
-                            const margin = idx > 0 ? '0 0 0 1px' : '0';
-                            return (
-                              <div 
-                                key={idx}
-                                className="bg-emerald-500 hover:bg-emerald-600 transition-colors relative group"
-                                style={{ 
-                                  height: `${height}%`,
-                                  width,
-                                  margin
-                                }}
-                              >
-                                {/* Tooltip on hover */}
-                                <div className="hidden group-hover:block absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                                  <div>{formatCurrency(sale.price)}</div>
-                                  <div>{new Date(sale.date).toLocaleDateString()}</div>
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-500 mt-2">
-                        {saleHistoryData.map((sale: any, idx: number) => (
-                          <div key={idx}>
-                            {new Date(sale.date).getFullYear()}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Detailed sale history table */}
-                  <div className="space-y-2">
-                    {saleHistoryData.map((sale: any, idx: number) => (
-                      <div key={idx} className="flex justify-between border-b border-gray-100 pb-2">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-600" />
-                          <span>{new Date(sale.date).toLocaleDateString()}</span>
-                        </div>
-                        <span className="font-medium">
-                          {typeof sale.price === 'number' && !isNaN(sale.price) 
-                            ? formatCurrency(sale.price) 
-                            : 'Price not available'}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Display nearby amenities if available */}
-              {selectedProperty.nearby_stations && selectedProperty.nearby_stations.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3">Nearby Transport</h3>
-                  <div className="space-y-2">
-                    {selectedProperty.nearby_stations.map((station: any, idx: number) => (
-                      <div key={idx} className="flex justify-between border-b border-gray-100 pb-2">
-                        <span>{station.name}</span>
-                        <span className="text-gray-600">{station.distance} miles</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              {/* Display nearby schools if available */}
-              {selectedProperty.nearby_schools && selectedProperty.nearby_schools.length > 0 && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold mb-3">Nearby Schools</h3>
-                  <div className="space-y-2">
-                    {selectedProperty.nearby_schools.map((school: any, idx: number) => (
-                      <div key={idx} className="flex justify-between border-b border-gray-100 pb-2">
-                        <span>{school.name}</span>
-                        <span className="text-gray-600">{school.distance} miles</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+        <div className="w-full max-w-lg rounded-lg bg-white p-6 shadow-xl">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">Error Loading Property</h2>
+            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" 
+                  stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
           </div>
+          <p className="text-red-600 mb-4">There was an error loading this property. Please try again.</p>
+          <button 
+            onClick={onClose}
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors duration-300"
+          >
+            Close
+          </button>
         </div>
       </div>
     );
+  }
+
+  // Use React.useState to store a stable copy of the property data
+  const [stableProperty, setStableProperty] = React.useState(property);
+  
+  // Update the stable property when property id changes
+  React.useEffect(() => {
+    if (property && property.id !== stableProperty?.id) {
+      setStableProperty(property);
+    }
+  }, [property, stableProperty?.id]);
+  
+  // Use React.useMemo to stabilize and prevent unnecessary re-renders
+  const memoizedProperty = React.useMemo(() => stableProperty, [stableProperty?.id]);
+  
+  // Stabilize price display to prevent flickering
+  const formattedPrice = React.useMemo(() => 
+    formatCurrency(memoizedProperty?.price || 0), 
+    [memoizedProperty?.price]
+  );
+  
+  // Safe getters for investment metrics with proper error handling
+  const getMetric = (value: number | undefined | null): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return 'N/A';
+    }
+    return value.toFixed(1) + '%';
+  };
+  
+  const getCashFlow = (value: number | undefined | null): string => {
+    if (value === undefined || value === null || isNaN(value)) {
+      return 'N/A';
+    }
+    return formatCurrency(value);
+  };
+  
+  const calculateTotalPriceGrowth = React.useCallback(() => {
+    if (!saleHistoryData || saleHistoryData.length < 2) return 0;
+    
+    try {
+      const firstSale = saleHistoryData[0];
+      const lastSale = saleHistoryData[saleHistoryData.length - 1];
+      
+      if (!firstSale.price || !lastSale.price) return 0;
+      
+      return ((lastSale.price - firstSale.price) / firstSale.price) * 100;
+    } catch (error) {
+      console.error('Error calculating total price growth:', error);
+      return 0;
+    }
+  }, [saleHistoryData]);
+  
+  // Pre-calculate derived values to prevent recalculation during renders
+  const calculateAnnualGrowth = React.useCallback(() => {
+    if (!saleHistoryData || saleHistoryData.length < 2) return 0;
+    
+    try {
+      const firstSale = saleHistoryData[0];
+      const lastSale = saleHistoryData[saleHistoryData.length - 1];
+      
+      if (!firstSale.date || !lastSale.date || !firstSale.price || !lastSale.price) return 0;
+      
+      const firstDate = new Date(firstSale.date);
+      const lastDate = new Date(lastSale.date);
+      
+      const yearsDiff = (lastDate.getTime() - firstDate.getTime()) / (1000 * 60 * 60 * 24 * 365);
+      
+      if (yearsDiff < 0.5) return 0;
+      
+      const totalGrowthRate = (lastSale.price - firstSale.price) / firstSale.price;
+      const annualGrowthRate = Math.pow(1 + totalGrowthRate, 1 / yearsDiff) - 1;
+      
+      return annualGrowthRate * 100;
+    } catch (error) {
+      console.error('Error calculating annual growth:', error);
+      return 0;
+    }
+  }, [saleHistoryData]);
+
+  const calculatePricePerSqft = React.useCallback(() => {
+    try {
+      if (memoizedProperty.floor_area?.size && memoizedProperty.floor_area.size > 0 && 
+          memoizedProperty.price && memoizedProperty.price > 0) {
+        return memoizedProperty.price / memoizedProperty.floor_area.size;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error calculating price per sqft:', error);
+      return null;
+    }
+  }, [memoizedProperty.price, memoizedProperty.floor_area]);
+
+  const pricePerSqft = React.useMemo(() => calculatePricePerSqft(), [calculatePricePerSqft]);
+  const annualGrowthRate = React.useMemo(() => calculateAnnualGrowth(), [calculateAnnualGrowth]);
+  const totalPriceGrowth = React.useMemo(() => calculateTotalPriceGrowth(), [calculateTotalPriceGrowth]);
+  
+  // Add debug mode toggle for development
+  const showDebug = import.meta.env.DEV;
+  
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+      <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-lg bg-white p-6 shadow-xl">
+        <div className="mb-6 flex justify-between">
+          <h2 className="text-2xl font-bold">{memoizedProperty.address || 'Property Details'}</h2>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        {/* Add debug panel in development mode */}
+        {showDebug && (
+          <div className="mb-4 p-3 bg-gray-100 rounded-md border border-gray-300 text-xs font-mono">
+            <h3 className="font-bold mb-2">Debug Info:</h3>
+            <div>
+              <div>Property ID: <span className="font-bold">{memoizedProperty.id}</span></div>
+              <div>Raw Price: <span className="font-bold">{memoizedProperty.price}</span></div>
+              <div>Formatted Price: <span className="font-bold">{formattedPrice}</span></div>
+              <div>Agent Name: <span className="font-bold">{memoizedProperty.agent.name}</span></div>
+              <div>Agent Phone: <span className="font-bold">{memoizedProperty.agent.phone || 'Not available'}</span></div>
+              <div>Agent Logo URL: <span className="font-bold">{memoizedProperty.agent.logo_url || 'Not available'}</span></div>
+              <div>Raw property data: <pre className="mt-2 overflow-auto max-h-20">{JSON.stringify(memoizedProperty, null, 2)}</pre></div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
+          <div>
+            {memoizedProperty.main_image_url && (
+              <img 
+                src={memoizedProperty.main_image_url} 
+                alt={memoizedProperty.address} 
+                className="mb-4 h-64 w-full rounded-lg object-cover" 
+              />
+            )}
+            <div className="mb-4 grid grid-cols-2 gap-4">
+              <div className="rounded-lg bg-gray-100 p-3">
+                <h3 className="font-medium text-gray-500">Price</h3>
+                <p className="text-lg font-bold">{formattedPrice}</p>
+              </div>
+              <div className="rounded-lg bg-gray-100 p-3">
+                <h3 className="font-medium text-gray-500">Property Type</h3>
+                <p className="text-lg font-bold">{memoizedProperty.property_type}</p>
+              </div>
+              <div className="rounded-lg bg-gray-100 p-3">
+                <h3 className="font-medium text-gray-500">Bedrooms</h3>
+                <p className="text-lg font-bold">{property.bedrooms}</p>
+              </div>
+              <div className="rounded-lg bg-gray-100 p-3">
+                <h3 className="font-medium text-gray-500">Bathrooms</h3>
+                <p className="text-lg font-bold">{property.bathrooms || "N/A"}</p>
+              </div>
+              {pricePerSqft && (
+                <div className="rounded-lg bg-gray-100 p-3">
+                  <h3 className="font-medium text-gray-500">Price per sq.ft</h3>
+                  <p className="text-lg font-bold">{formatCurrency(pricePerSqft)}</p>
+                </div>
+              )}
+              {property.tenure && (
+                <div className="rounded-lg bg-gray-100 p-3">
+                  <h3 className="font-medium text-gray-500">Tenure</h3>
+                  <p className="text-lg font-bold">{property.tenure}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="mb-4">
+              <h3 className="mb-2 text-xl font-bold">Description</h3>
+              <p className="text-gray-700">{property.description}</p>
+            </div>
+            
+            {property.features && property.features.length > 0 && (
+              <div className="mb-4">
+                <h3 className="mb-2 text-xl font-bold">Features</h3>
+                <ul className="list-inside list-disc">
+                  {property.features.map((feature: string, index: number) => (
+                    <li key={index} className="text-gray-700">{feature}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <Tabs defaultValue="investment">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="investment">Investment</TabsTrigger>
+                <TabsTrigger value="area">Area Insights</TabsTrigger>
+                <TabsTrigger value="history">Sale History</TabsTrigger>
+                <TabsTrigger value="agent">Agent Details</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="investment" className="mt-4">
+                {investmentAnalysis ? (
+                  <div>
+                    <h3 className="text-xl font-semibold mb-3">Investment Analysis</h3>
+                    
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                      <div className="bg-blue-50 p-3 rounded-md">
+                        <h4 className="text-sm text-blue-700">Rental Yield</h4>
+                        <p className="text-xl font-bold">{getMetric(investmentAnalysis.estimatedRentalYield)}</p>
+                      </div>
+                      <div className="bg-green-50 p-3 rounded-md">
+                        <h4 className="text-sm text-green-700">Return on Investment</h4>
+                        <p className="text-xl font-bold">{getMetric(investmentAnalysis.estimatedROI)}</p>
+                      </div>
+                      <div className="bg-purple-50 p-3 rounded-md">
+                        <h4 className="text-sm text-purple-700">Monthly Cash Flow</h4>
+                        <p className="text-xl font-bold">{getCashFlow(investmentAnalysis.estimatedCashFlow)}</p>
+                      </div>
+                      <div className="bg-amber-50 p-3 rounded-md">
+                        <h4 className="text-sm text-amber-700">Annual Profit</h4>
+                        <p className="text-xl font-bold">{getCashFlow(investmentAnalysis.estimatedAnnualProfit)}</p>
+                      </div>
+                      <div className="bg-indigo-50 p-3 rounded-md">
+                        <h4 className="text-sm text-indigo-700">Cap Rate</h4>
+                        <p className="text-xl font-bold">{getMetric(investmentAnalysis.estimatedCapRate)}</p>
+                      </div>
+                      <div className="bg-rose-50 p-3 rounded-md">
+                        <h4 className="text-sm text-rose-700">Area Growth Potential</h4>
+                        <p className="text-xl font-bold">{getMetric(investmentAnalysis.areaGrowthPotential)}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-6">
+                      <h4 className="font-semibold mb-2">Top Investment Strategies</h4>
+                      <div className="space-y-3">
+                        {investmentAnalysis.strategyRecommendations && 
+                         investmentAnalysis.strategyRecommendations.slice(0, 3).map((strategy, index) => (
+                          <div key={index} className="border rounded-md p-3">
+                            <div className="flex justify-between items-center mb-1">
+                              <span className="font-medium">{strategy.strategy}</span>
+                              <span className={`px-2 py-0.5 rounded text-sm ${
+                                strategy.score >= 8 ? 'bg-green-100 text-green-800' : 
+                                strategy.score >= 6 ? 'bg-blue-100 text-blue-800' : 
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                Score: {strategy.score?.toFixed(1) || 'N/A'}
+                              </span>
+                            </div>
+                            <p className="text-sm text-gray-600">{strategy.reasoning}</p>
+                          </div>
+                        ))}
+                        
+                        {(!investmentAnalysis.strategyRecommendations || 
+                          investmentAnalysis.strategyRecommendations.length === 0) && (
+                          <p className="text-gray-500">No strategy recommendations available</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                      <div>
+                        <h4 className="font-semibold mb-2">Property Potential</h4>
+                        <p className="text-gray-700">{investmentAnalysis.propertyPotential || 'No data available'}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-2">Renovation Opportunities</h4>
+                        <p className="text-gray-700">{investmentAnalysis.renovationOpportunities || 'No data available'}</p>
+                        {investmentAnalysis.estimatedRenovationCost > 0 && (
+                          <p className="mt-2 font-medium">Estimated Cost: {getCashFlow(investmentAnalysis.estimatedRenovationCost)}</p>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <h4 className="font-semibold mb-2">Risk Assessment</h4>
+                        <p className="text-gray-700">{investmentAnalysis.riskAssessment || 'No data available'}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-semibold mb-2">Market Trends</h4>
+                        <p className="text-gray-700">{investmentAnalysis.marketTrends || 'No data available'}</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center">
+                    <div className="animate-spin mx-auto mb-4 h-8 w-8 text-gray-500">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </div>
+                    <p className="text-gray-500">Analyzing investment potential...</p>
+                    <p className="text-sm text-gray-400 mt-2">This may take a moment as we calculate metrics for this property.</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="area" className="mt-4">
+                <div className="rounded-lg border p-4">
+                  <h3 className="mb-4 text-xl font-bold">Area Insights</h3>
+                  {areaInsights ? (
+                    <div className="space-y-4">
+                      <div>
+                        <h4 className="font-medium text-gray-500">Average Property Price</h4>
+                        <p className="text-lg font-bold">{formatCurrency(areaInsights.averagePrice)}</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-500">Price Growth (1 Year)</h4>
+                        <p className="text-lg font-bold">{areaInsights.priceGrowth1Year.toFixed(1)}%</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-500">Price Growth (5 Years)</h4>
+                        <p className="text-lg font-bold">{areaInsights.priceGrowth5Years.toFixed(1)}%</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-500">Crime Rate</h4>
+                        <p className="text-lg font-bold">{areaInsights.crimeRate} (per 1,000 people)</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-500">Schools Rating</h4>
+                        <p className="text-lg font-bold">{areaInsights.schoolsRating}/10</p>
+                      </div>
+                      <div>
+                        <h4 className="font-medium text-gray-500">Transport Rating</h4>
+                        <p className="text-lg font-bold">{areaInsights.transportRating}/10</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">Area insights not available for this location.</p>
+                  )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="history">
+                <div className="rounded-lg border p-4">
+                  <h3 className="mb-4 text-xl font-bold">Sale History</h3>
+                  {saleHistoryData && saleHistoryData.length > 0 ? (
+                    <div>
+                      <div className="mb-4">
+                        <h4 className="font-medium text-gray-500">Total Price Growth</h4>
+                        <p className="text-lg font-bold">{totalPriceGrowth.toFixed(1)}%</p>
+                      </div>
+                      {annualGrowthRate > 0 && (
+                        <div className="mb-4">
+                          <h4 className="font-medium text-gray-500">Annual Growth Rate</h4>
+                          <p className="text-lg font-bold">{annualGrowthRate.toFixed(1)}%</p>
+                        </div>
+                      )}
+                      <table className="w-full">
+                        <thead>
+                          <tr>
+                            <th className="text-left">Date</th>
+                            <th className="text-right">Price</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {saleHistoryData.map((sale, index) => (
+                            <tr key={index} className="border-t">
+                              <td className="py-2">{new Date(sale.date).toLocaleDateString()}</td>
+                              <td className="py-2 text-right">{formatCurrency(sale.price)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                </div>
+                ) : (
+                  <p className="text-gray-500">No sale history available for this property.</p>
+                )}
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="agent">
+                <div className="rounded-lg border p-4">
+                  <h3 className="mb-4 text-xl font-bold">Agent Details</h3>
+                  <div className="flex items-center space-x-4">
+                    {property.agent.logo_url && (
+                      <img 
+                        src={property.agent.logo_url} 
+                        alt={property.agent.name} 
+                        className="h-16 w-16 rounded-lg object-contain" 
+                      />
+                    )}
+                    <div>
+                      <p className="text-lg font-bold">{property.agent.name}</p>
+                      {property.agent.phone && (
+                        <p className="text-gray-700">{property.agent.phone}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="mt-4">
+                    <a 
+                      href={property.rightmove_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="inline-block rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                    >
+                      View on Rightmove
+                    </a>
+                  </div>
+                </div>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Update the SearchDebugPanel component with the proper type
+const SearchDebugPanel = ({ 
+  searchDetails, 
+  properties 
+}: { 
+  searchDetails: SearchDetails; 
+  properties: RightmoveProperty[] 
+}) => {
+  // Calculate property statistics
+  const validProperties = properties.filter(p => p.price > 0);
+  const validPricesCount = validProperties.length;
+  const zeroPriceCount = properties.filter(p => p.price === 0).length;
+  const missingAddressCount = properties.filter(p => !p.address).length;
+  
+  // Calculate price statistics
+  const prices = validProperties.map(p => p.price).filter(p => p > 0);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : 0;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : 0;
+  const avgPrice = prices.length > 0 ? prices.reduce((a, b) => a + b, 0) / prices.length : 0;
+  
+  // Get the first property for inspection
+  const firstProperty = properties.length > 0 ? properties[0] : null;
+  
+  return (
+    <div className="mb-4 text-xs p-3 bg-gray-100 rounded border border-gray-300">
+      <h3 className="font-bold mb-2">Search Debug Panel</h3>
+      
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-3">
+        <div>Original Location: <span className="font-medium">{searchDetails.originalLocation}</span></div>
+        <div>Formatted Location: <span className="font-medium">{searchDetails.formattedLocation}</span></div>
+        <div>Is Outcode: <span className="font-medium">{searchDetails.isOutcode ? 'Yes' : 'No'}</span></div>
+        <div>Properties Found: <span className="font-medium">{properties.length}</span></div>
+        <div>Search Duration: <span className="font-medium">{searchDetails.searchDurationMs?.toFixed(2) || 'N/A'} ms</span></div>
+      </div>
+      
+      <h4 className="font-bold mt-3 mb-1">Property Statistics:</h4>
+      <div className="grid grid-cols-2 gap-x-4 gap-y-1 mb-3">
+        <div>Valid Prices: <span className={`font-medium ${validPricesCount === 0 ? 'text-red-600' : ''}`}>
+          {validPricesCount} / {properties.length}
+        </span></div>
+        <div>Zero Prices: <span className={`font-medium ${zeroPriceCount > 0 ? 'text-red-600' : ''}`}>
+          {zeroPriceCount}
+        </span></div>
+        <div>Missing Addresses: <span className={`font-medium ${missingAddressCount > 0 ? 'text-red-600' : ''}`}>
+          {missingAddressCount}
+        </span></div>
+        <div>Min Price: <span className="font-medium">{formatCurrency(minPrice)}</span></div>
+        <div>Max Price: <span className="font-medium">{formatCurrency(maxPrice)}</span></div>
+        <div>Avg Price: <span className="font-medium">{formatCurrency(avgPrice)}</span></div>
+      </div>
+      
+      {firstProperty && (
+        <>
+          <h4 className="font-bold mt-3 mb-1">First Property Data:</h4>
+          <div className="bg-gray-200 p-2 rounded overflow-auto max-h-60">
+            <pre className="text-xs">{JSON.stringify({
+              id: firstProperty.id,
+              address: firstProperty.address,
+              price: typeof firstProperty.price === 'number' 
+                ? firstProperty.price.toString() 
+                : firstProperty.price,
+              formattedPrice: formatCurrency(firstProperty.price),
+              agent: firstProperty.agent
+            }, null, 2)}</pre>
+          </div>
+          
+          <h4 className="font-bold mt-3 mb-1">Raw First Property Data (For Debugging):</h4>
+          <div className="bg-gray-200 p-2 rounded overflow-auto max-h-60">
+            <pre className="text-xs">{JSON.stringify(firstProperty, null, 2)}</pre>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+// Add a memoized property card component for better performance
+const MemoizedPropertyCard = React.memo(
+  ({ 
+    property, 
+    onSelect, 
+    analyzingProperties, 
+    propertyAnalysis 
+  }: { 
+    property: RightmoveProperty; 
+    onSelect: (property: RightmoveProperty) => void;
+    analyzingProperties: string[];
+    propertyAnalysis: Record<string, PropertyInvestmentAnalysis>;
+  }) => {
+    // Safety check for property
+    if (!property || !property.id) {
+      console.error('Cannot render property card: Invalid property data', property);
+      return null;
+    }
+    
+    // Get from props now
+    const isAnalyzing = analyzingProperties.includes(property.id);
+    const analysis = propertyAnalysis[property.id];
+    
+    // Safe getters for investment metrics to avoid NaN values
+    const getMetric = (value: number | undefined | null): string => {
+      if (value === undefined || value === null || isNaN(value)) {
+        return 'N/A';
+      }
+      return value.toFixed(1) + '%';
+    };
+    
+    const getCashFlow = (value: number | undefined | null): string => {
+      if (value === undefined || value === null || isNaN(value)) {
+        return 'N/A';
+      }
+      return formatCurrency(value);
+    };
+
+    return (
+      <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
+        <div className="aspect-video relative bg-gray-200">
+          {property.main_image_url ? (
+            <img 
+              src={property.main_image_url} 
+              alt={property.address || 'Property'} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="flex items-center justify-center h-full bg-gray-200">
+              <span className="text-gray-400">No Image Available</span>
+            </div>
+          )}
+          <div className="absolute top-0 right-0 bg-blue-600 text-white px-3 py-1 text-sm font-semibold">
+            {formatCurrency(property.price || 0)}
+          </div>
+        </div>
+        
+        <div className="p-4">
+          <h3 className="text-lg font-semibold mb-2 line-clamp-1">
+            {property.address || 'Property Address Unavailable'}
+          </h3>
+          
+          <div className="flex justify-between mb-3">
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+              </svg>
+              <span>{property.property_type || 'Unknown'}</span>
+            </div>
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
+              </svg>
+              <span>{property.bedrooms || 0} beds</span>
+            </div>
+            <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5.5 2a3.5 3.5 0 00-3.495 3.334L2 5.5v9A3.5 3.5 0 005.5 18h9a3.5 3.5 0 003.5-3.5v-9A3.5 3.5 0 0014.5 2h-9zM4 5.5a1.5 1.5 0 011.5-1.5h9a1.5 1.5 0 011.5 1.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 014 14.5v-9z" clipRule="evenodd" />
+              </svg>
+              <span>{property.bathrooms || 1} bath</span>
+            </div>
+          </div>
+          
+          {/* Investment analysis section */}
+          {analysis ? (
+            <div className="border-t pt-3 mt-2">
+              <h4 className="text-sm font-semibold mb-2 text-blue-600">Investment Highlights</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500">ROI:</span> <span className="font-medium">{getMetric(analysis.estimatedROI)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Yield:</span> <span className="font-medium">{getMetric(analysis.estimatedRentalYield)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Monthly:</span> <span className="font-medium">{getCashFlow(analysis.estimatedCashFlow)}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Best Strategy:</span> <span className="font-medium">
+                    {analysis.strategyRecommendations && analysis.strategyRecommendations.length > 0 
+                      ? analysis.strategyRecommendations[0].strategy 
+                      : 'N/A'}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-500">Area Growth:</span> <span className="font-medium">{getMetric(analysis.areaGrowthPotential)}</span>
+                </div>
+              </div>
+            </div>
+          ) : isAnalyzing ? (
+            <div className="border-t pt-3 mt-2">
+              <div className="flex items-center justify-center text-sm text-gray-500">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Analyzing investment potential...
+              </div>
+            </div>
+          ) : null}
+          
+          <button 
+            onClick={() => onSelect(property)} 
+            className="mt-3 w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition-colors duration-300"
+          >
+            View Details
+          </button>
+        </div>
+      </div>
+    );
+  }
+);
+
+export default function Listings() {
+  const { toast } = useToast();
+  const [loading, setLoading] = React.useState(false);
+  const [properties, setProperties] = React.useState<RightmoveProperty[]>([]);
+  const [selectedProperty, setSelectedProperty] = React.useState<RightmoveProperty | null>(null);
+  const [selectedPropertySaleHistory, setSelectedPropertySaleHistory] = React.useState<PropertySaleHistory[]>([]);
+  const [selectedPropertyAreaInsights, setSelectedPropertyAreaInsights] = React.useState<AreaInsights | undefined>(undefined);
+  const [selectedPropertyAnalysis, setSelectedPropertyAnalysis] = React.useState<PropertyInvestmentAnalysis | null>(null);
+  const [location, setLocation] = React.useState("");
+  const [minPrice, setMinPrice] = React.useState("");
+  const [maxPrice, setMaxPrice] = React.useState("");
+  const [minBeds, setMinBeds] = React.useState("");
+  const [maxBeds, setMaxBeds] = React.useState("");
+  const [propertyType, setPropertyType] = React.useState("");
+  const [page, setPage] = React.useState(1);
+  const [totalPages, setTotalPages] = React.useState(1);
+  const [totalResults, setTotalResults] = React.useState(0);
+  const [viewMode, setViewMode] = React.useState<"grid" | "list">("grid");
+  const [isMockData, setIsMockData] = React.useState<boolean>(false);
+  const [initializing, setInitializing] = React.useState(false);
+  const [isTableReady, setIsTableReady] = React.useState(false);
+  const [dbDiagnostics, setDbDiagnostics] = React.useState<any>(null);
+  const [runningDiagnostics, setRunningDiagnostics] = React.useState(false);
+  const [scraperError, setScraperError] = React.useState<string | null>(null);
+  const [directPropertyId, setDirectPropertyId] = React.useState<string>("");
+  const [isDirectPropertyLoading, setIsDirectPropertyLoading] = React.useState(false);
+  const [apiKeyInvalid, setApiKeyInvalid] = React.useState<boolean>(false);
+  const [showDebugPanel, setShowDebugPanel] = React.useState(false);
+  const [searchDetails, setSearchDetails] = React.useState<SearchDetails | null>(null);
+  const [propertyAnalysis, setPropertyAnalysis] = React.useState<Record<string, PropertyInvestmentAnalysis>>({});
+  const [analyzingProperties, setAnalyzingProperties] = React.useState<string[]>([]);
+  // Add error state
+  const [searchError, setSearchError] = React.useState<string | null>(null);
+
+  const displayProperties = properties;
+
+  const mockSaleHistory = (propertyId: string): PropertySaleHistory[] => {
+    const baseDate = new Date();
+    baseDate.setFullYear(baseDate.getFullYear() - 15);
+    
+    const numSales = 2 + Math.floor(Math.random() * 3);
+    const result: PropertySaleHistory[] = [];
+    
+    let currentDate = new Date(baseDate);
+    let currentPrice = 100000 + Math.floor(Math.random() * 150000);
+    
+    for (let i = 0; i < numSales; i++) {
+      result.push({
+        date: currentDate.toISOString().split('T')[0],
+        price: currentPrice
+      });
+      
+      const yearsToAdd = 2 + Math.floor(Math.random() * 4);
+      currentDate = new Date(currentDate.setFullYear(currentDate.getFullYear() + yearsToAdd));
+      
+      const increase = 0.1 + Math.random() * 0.2;
+      currentPrice = Math.floor(currentPrice * (1 + increase));
+    }
+    
+    return result;
+  };
+
+  const mockAreaInsights = (postcode: string): AreaInsights => {
+    return {
+      postcode,
+      averagePrice: 250000 + Math.floor(Math.random() * 500000),
+      priceGrowth1Year: 2 + Math.random() * 8,
+      priceGrowth5Years: 10 + Math.random() * 30,
+      crimeRate: 30 + Math.random() * 40,
+      schoolsRating: 5 + Math.random() * 5,
+      transportRating: 4 + Math.random() * 6
+    };
+  };
+
+  // Memoize the handleSearch function to prevent it from changing on every render
+  const handleSearch = React.useCallback(async (searchLocation: string) => {
+    if (!searchLocation.trim()) {
+      setSearchError('Please enter a location to search');
+      return;
+    }
+
+    // Reset states
+    setProperties([]);
+    setSearchError(null);
+    setLoading(true);
+    setSelectedProperty(null);
+    setPage(1);
+    
+    // Record the start time
+    const searchStartTime = Date.now();
+    
+    // Reset analytics state to prevent stale data
+    setPropertyAnalysis({});
+    setAnalyzingProperties([]);
+    
+    // Capture search start time for performance tracking
+    const startTime = Date.now();
+    
+    try {
+      console.log('Starting search for location:', searchLocation);
+      
+      // Create search info object for debugging
+      const searchInfo: SearchDetails = {
+        originalLocation: searchLocation,
+        formattedLocation: searchLocation,
+        isOutcode: /^[A-Z]{1,2}[0-9]{1,2}[A-Z]?$/i.test(searchLocation),
+        timestamp: new Date().toISOString(),
+      };
+      
+      // Add cache-busting parameter for development mode
+      if (import.meta.env.DEV && Math.random() > 0.5) {
+        const cacheBustLocation = `${searchLocation}?_bypass_cache=${Date.now()}`;
+        searchInfo.cacheBustLocation = cacheBustLocation;
+        searchLocation = cacheBustLocation;
+      }
+      
+      // Filter parameters
+      const searchParams = {
+        location: searchLocation,
+        limit: 100, // Set a reasonable limit for the API
+        minPrice: minPrice ? parseInt(minPrice) : undefined,
+        maxPrice: maxPrice ? parseInt(maxPrice) : undefined,
+        minBeds: minBeds ? parseInt(minBeds) : undefined,
+        maxBeds: maxBeds ? parseInt(maxBeds) : undefined,
+        propertyType: propertyType || undefined,
+      };
+      
+      console.log('Searching with parameters:', searchParams);
+      
+      // Execute search
+      const response = await searchRightmoveProperties(searchParams);
+      
+      console.log(`Search completed with ${response.properties.length} results`);
+      
+      // Validate response
+      if (!response || !Array.isArray(response.properties)) {
+        throw new Error('Invalid response structure from property search');
+      }
+      
+      // Calculate search duration
+      const endTime = Date.now();
+      const searchDurationMs = endTime - startTime;
+      
+      // Validate properties to check for data quality issues
+      let validCount = 0;
+      let zeroPriceCount = 0;
+      let missingAddressCount = 0;
+      
+      response.properties.forEach(property => {
+        if (!property.price || property.price === 0) zeroPriceCount++;
+        if (!property.address) missingAddressCount++;
+        if (property.price > 0 && property.address) validCount++;
+      });
+      
+      // Update search info with stats
+      searchInfo.searchDurationMs = searchDurationMs;
+      searchInfo.propertiesFound = response.properties.length;
+      searchInfo.zeroPriceCount = zeroPriceCount;
+      searchInfo.missingAddressCount = missingAddressCount;
+      
+      setSearchDetails(searchInfo);
+      setProperties(response.properties);
+      setTotalPages(response.totalPages || 1);
+      
+      // Log data quality issues for debugging
+      if (zeroPriceCount > 0 || missingAddressCount > 0) {
+        console.warn(`Data quality issues: ${zeroPriceCount} properties with zero price, ${missingAddressCount} properties with missing address`);
+      }
+      
+      // For development, automatically analyze first few properties
+      if (import.meta.env.DEV && response.properties.length > 0) {
+        analyzePropertiesInBatches(response.properties, 3, 2000);
+      }
+    } catch (error) {
+      console.error('Error during property search:', error);
+      setSearchError(`Failed to search properties: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      // Show user-friendly toast
+      toast({
+        title: "Search Error",
+        description: error instanceof Error ? error.message : "An unexpected error occurred during search",
+        variant: "destructive",
+      });
+    } finally {
+      // Ensure the loading state stays visible for at least 1 second to avoid flickering
+      const searchDuration = Date.now() - searchStartTime;
+      const minimumLoadingTime = 1000; // 1 second
+      
+      if (searchDuration < minimumLoadingTime) {
+        setTimeout(() => {
+          setLoading(false);
+        }, minimumLoadingTime - searchDuration);
+      } else {
+        setLoading(false);
+      }
+    }
+  }, [minPrice, maxPrice, minBeds, maxBeds, propertyType, toast]);
+
+  // Update the useEffect to use proper dependencies
+  React.useEffect(() => {
+    if (page > 1 && location) {
+      handleSearch(location);
+    }
+  }, [page, location, handleSearch]);
+  
+  // Simplified Hero search function
+  const handleHeroSearch = React.useCallback((searchTerm: string) => {
+    setLocation(searchTerm);
+    if (searchTerm) {
+      handleSearch(searchTerm);
+    }
+  }, [handleSearch]);
+
+  // Check if the scraper_cache table exists on component mount
+  React.useEffect(() => {
+    const checkTable = async () => {
+      const exists = await ensureScraperCacheTableExists();
+      setIsTableReady(exists);
+    };
+    
+    checkTable();
+  }, []);
+
+  // Function to manually initialize the scraper_cache table
+  const initializeScraper = async () => {
+    setInitializing(true);
+    try {
+      const success = await ensureScraperCacheTableExists();
+      setIsTableReady(success);
+      
+      if (success) {
+            toast({
+          title: "Setup complete",
+          description: "The scraper_cache table has been set up successfully",
+              variant: "default",
+            });
+      } else {
+          toast({
+          title: "Setup failed",
+          description: "Failed to set up the scraper_cache table. Check console for details.",
+            variant: "destructive",
+          });
+        }
+    } catch (error) {
+      console.error("Error initializing scraper:", error);
+      toast({
+        title: "Setup error",
+        description: "An error occurred while setting up the scraper",
+        variant: "destructive",
+      });
+    } finally {
+      setInitializing(false);
+    }
+  };
+
+  const runDatabaseDiagnostics = async () => {
+    setRunningDiagnostics(true);
+    try {
+      // Test the connection
+      const connectionTest = await testSupabaseConnection();
+      console.log("Supabase connection test:", connectionTest);
+      
+      // Direct test for table existence - simple count query
+      let directTableTest: { exists: boolean; error: string | null; count: number } = { 
+        exists: false, 
+        error: null, 
+        count: 0 
+      };
+      
+      try {
+        const { data, error, count } = await supabase
+          .from('scraper_cache')
+          .select('*', { count: 'exact', head: true });
+          
+        directTableTest = { 
+          exists: !error, 
+          error: error ? `${error.code}: ${error.message}` : null,
+          count: count || 0
+        };
+        
+        console.log("Direct table check:", directTableTest);
+      } catch (e) {
+        console.error("Error in direct table check:", e);
+        directTableTest.error = e instanceof Error ? e.message : String(e);
+      }
+      
+      // Test insertion capability if the table exists
+      let insertTest: { success: boolean; error: string | null } = { 
+        success: false, 
+        error: null 
+      };
+      
+      if (directTableTest.exists) {
+        try {
+          const testKey = `diagnostic-test-${Date.now()}`;
+          const { error } = await supabase
+            .from('scraper_cache')
+            .insert({ 
+              key: testKey, 
+              data: { test: 'diagnostics' },
+              created_at: new Date().toISOString()
+            });
+            
+          insertTest = { 
+            success: !error, 
+            error: error ? `${error.code}: ${error.message}` : null 
+          };
+          
+          console.log("Insert test:", insertTest);
+          
+          // Clean up the test entry
+          if (!error) {
+            await supabase
+              .from('scraper_cache')
+              .delete()
+              .eq('key', testKey);
+          }
+        } catch (e) {
+          console.error("Error in insert test:", e);
+          insertTest.error = e instanceof Error ? e.message : String(e);
+        }
+      }
+      
+      // Test table existence using our helper function
+      const tableExists = await ensureScraperCacheTableExists();
+      console.log("Helper function check result:", tableExists);
+      
+      // Store diagnostics results
+      setDbDiagnostics({
+        connectionTest,
+        tableExists,
+        directTableTest,
+        insertTest,
+        timestamp: new Date().toISOString(),
+        env: {
+          mockData: import.meta.env.VITE_USE_MOCK_DATA,
+          nodeEnv: import.meta.env.NODE_ENV,
+          mode: import.meta.env.MODE
+        }
+      });
+      
+      // Show results to user
+      if (directTableTest.exists && insertTest.success) {
+        toast({
+          title: "Database Ready",
+          description: "Your scraper_cache table exists and is working correctly!",
+          variant: "default",
+        });
+      } else if (directTableTest.exists && !insertTest.success) {
+        toast({
+          title: "Table Exists But Can't Insert",
+          description: "The table exists but we can't write to it. Check RLS policies.",
+          variant: "warning",
+        });
+    } else {
+        toast({
+          title: connectionTest.success ? "Table Missing" : "Connection Issues",
+          description: connectionTest.success 
+            ? "The scraper_cache table doesn't exist or isn't accessible."
+            : connectionTest.message,
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error running diagnostics:", error);
+      setDbDiagnostics({
+        error: error instanceof Error ? error.message : "Unknown error",
+        timestamp: new Date().toISOString()
+      });
+      
+      toast({
+        title: "Diagnostics Error",
+        description: "Failed to run database diagnostics. See console for details.",
+        variant: "destructive",
+      });
+    } finally {
+      setRunningDiagnostics(false);
+    }
+  };
+
+  // Add a function to get or generate property analysis
+  const getPropertyAnalysis = async (property: RightmoveProperty) => {
+    if (!property || !property.id) {
+      console.error('Cannot analyze property: Invalid property data', property);
+      return null;
+    }
+    
+    // Check if we already have analysis for this property
+    if (propertyAnalysis[property.id]) {
+      console.log(`Using cached analysis for property ${property.id}`);
+      return propertyAnalysis[property.id];
+    }
+    
+    // Mark property as being analyzed
+    setAnalyzingProperties(prev => [...prev, property.id]);
+    
+    try {
+      // Get investment analysis for this property
+      console.log(`Analyzing property ${property.id}...`);
+      const analysis = await analyzePropertyInvestment(property);
+      
+      // Save the analysis
+      setPropertyAnalysis(prev => ({
+        ...prev,
+        [property.id]: analysis
+      }));
+      
+      return analysis;
+    } catch (error) {
+      console.error(`Error analyzing property ${property.id}:`, error);
+      return null;
+    } finally {
+      // Remove property from analyzing state
+      setAnalyzingProperties(prev => prev.filter(id => id !== property.id));
+    }
+  };
+
+  // Modify the function that handles property selection
+  const handlePropertySelect = async (property: RightmoveProperty) => {
+    if (!property || !property.id) {
+      console.error('Cannot select property: Invalid property data', property);
+      return;
+    }
+    
+    try {
+      // Get mock data for sale history and area insights
+      const saleHistory = mockSaleHistory(property.id);
+      const areaInsights = mockAreaInsights(property.postcode || '');
+      
+      // Get or fetch investment analysis
+      const analysis = await getPropertyAnalysis(property);
+      
+      // Set selected property with all data
+      setSelectedProperty(property);
+      setSelectedPropertySaleHistory(saleHistory);
+      setSelectedPropertyAreaInsights(areaInsights);
+      setSelectedPropertyAnalysis(analysis);
+    } catch (error) {
+      console.error('Error selecting property:', error);
+      // Just set basic property data in case of error
+      setSelectedProperty(property);
+      setSelectedPropertySaleHistory([]);
+      setSelectedPropertyAreaInsights(undefined);
+      setSelectedPropertyAnalysis(null);
+    }
+  };
+
+  // Update the useEffect that triggers property analysis to use the new batch function
+  React.useEffect(() => {
+    if (properties.length > 0) {
+      analyzePropertiesInBatches(properties);
+    }
+  }, [properties]);
+
+  // Add this function after the getPropertyAnalysis function
+  const analyzePropertiesInBatches = (properties: RightmoveProperty[], batchSize = 3, delayMs = 2000) => {
+    if (!properties || properties.length === 0) return;
+    
+    console.log(`Starting batch analysis of ${properties.length} properties`);
+    
+    // Analyze first batch immediately
+    const firstBatch = properties.slice(0, batchSize);
+    firstBatch.forEach(property => getPropertyAnalysis(property));
+    
+    // Process remaining properties in batches with delay
+    if (properties.length > batchSize) {
+      let currentBatch = 1;
+      const totalBatches = Math.ceil((properties.length - batchSize) / batchSize);
+      
+      const processNextBatch = () => {
+        if (currentBatch <= totalBatches) {
+          const startIdx = currentBatch * batchSize;
+          const endIdx = Math.min(startIdx + batchSize, properties.length);
+          const batch = properties.slice(startIdx, endIdx);
+          
+          console.log(`Processing batch ${currentBatch}/${totalBatches} (${batch.length} properties)`);
+          
+          batch.forEach((property, idx) => {
+            // Stagger the analysis within each batch to avoid overwhelming the API
+            setTimeout(() => getPropertyAnalysis(property), idx * 500);
+          });
+          
+          currentBatch++;
+          setTimeout(processNextBatch, delayMs);
+        }
+      };
+      
+      // Start processing batches after initial delay
+      setTimeout(processNextBatch, delayMs);
+    }
+  };
+
+  // Add a function to search by direct property ID
+  const handleDirectPropertySearch = async () => {
+    if (!directPropertyId || directPropertyId.trim() === '') {
+      toast({
+        title: "Property ID required",
+        description: "Please enter a Rightmove property ID",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    setIsDirectPropertyLoading(true);
+    setProperties([]);
+    setIsMockData(false);
+    setScraperError(null);
+    setApiKeyInvalid(false);
+    
+    try {
+      toast({
+        title: "Fetching property details",
+        description: "This may take up to 30 seconds as we fetch data from Rightmove",
+        variant: "default",
+      });
+      
+      // Get the property details
+      const property = await getPropertyDetails(directPropertyId.trim());
+      
+      if (property) {
+        setProperties([property]);
+        setTotalPages(1);
+        
+        toast({
+          title: "Property Found",
+          description: "Successfully loaded the property details",
+          variant: "default",
+        });
+      } else {
+        toast({
+          title: "Property Not Found",
+          description: "No details found for that property ID",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching property:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Detailed error handling for Apify
+      if (errorMessage.includes('Apify token validation failed')) {
+        setApiKeyInvalid(true);
+        toast({
+          title: "Apify Token Invalid",
+          description: "Your Apify API token appears to be invalid. Please check your settings.",
+          variant: "destructive",
+        });
+      } else if (errorMessage.includes('actor run failed')) {
+        setScraperError(`Apify scraper failed: ${errorMessage}`);
+        toast({
+          title: "Scraper Failed",
+          description: "The Rightmove scraper encountered an error. Please try again later.",
+          variant: "destructive",
+        });
+      } else {
+        setScraperError(errorMessage);
+        toast({
+          title: "Property Search Failed",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsDirectPropertyLoading(false);
+    }
   };
 
   return (
     <Layout>
-      {/* Hero Section - Matching Deals page design */}
-      <div className="bg-background">
-        <div className="relative">
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-cyan-500 mix-blend-multiply" />
-          </div>
-          <div className="relative px-4 py-24 sm:px-6 sm:py-32 lg:py-40 lg:px-8">
-            <h1 className="text-center text-4xl font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl">
-              Property Search
-            </h1>
-            <p className="mx-auto mt-6 max-w-lg text-center text-xl text-white sm:max-w-3xl">
-              Search through thousands of properties, compare market prices, and make informed decisions with our comprehensive property data.
+      <style dangerouslySetInnerHTML={{ __html: animationStyles }} />
+      <HeroSection 
+        title="Find Your Perfect Investment Property"
+        subtitle="Search thousands of properties to discover your next investment opportunity"
+        onSearch={handleHeroSearch}
+        showSearch={true}
+        height="h-[400px]"
+      />
+      
+      <div className="container mx-auto p-4 -mt-12 relative z-10">
+        {!isTableReady && (
+          <div className="mb-4 rounded-md bg-red-50 p-4 text-red-800 border border-red-200">
+            <h3 className="font-medium mb-2">Database Setup Required</h3>
+            <p className="mb-3">
+              The scraper_cache table is not set up in your Supabase database. This is needed to cache property data.
             </p>
-          </div>
-        </div>
-      </div>
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Combined Search and Filters Section */}
-        <div className="bg-white rounded-xl shadow-md p-6 mb-8 -mt-16 relative z-10">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <h2 className="text-2xl font-bold">Find Properties</h2>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button
-                variant={viewMode === 'listed' ? 'default' : 'outline'}
-                onClick={() => setViewMode('listed')}
-                className="min-w-[120px]"
+                onClick={initializeScraper} 
+                disabled={initializing || runningDiagnostics} 
+                variant="destructive"
               >
-                Listed Properties
+                {initializing ? <LoadingSpinner size="sm" /> : "Initialize Database"}
               </Button>
+              
               <Button
-                variant={viewMode === 'sold' ? 'default' : 'outline'}
-                onClick={() => setViewMode('sold')}
-                className="min-w-[120px]"
+                onClick={runDatabaseDiagnostics}
+                disabled={runningDiagnostics || initializing}
+                variant="outline"
               >
-                Sold Properties
+                {runningDiagnostics ? <LoadingSpinner size="sm" /> : "Run Diagnostics"}
               </Button>
             </div>
-          </div>
-
-          <div className="space-y-6">
-            {/* Filters Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Select
-                value={filters.propertyType}
-                onValueChange={handlePropertyTypeChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Property Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  {/* Only show "Any Type" for listed properties */}
-                  {viewMode === 'listed' && (
-                    <SelectItem value="any">Any Type</SelectItem>
-                  )}
-                  <SelectItem value="flat">Flat</SelectItem>
-                  <SelectItem value="terraced">Terraced</SelectItem>
-                  <SelectItem value="semi-detached">Semi-Detached</SelectItem>
-                  <SelectItem value="detached">Detached</SelectItem>
-                  <SelectItem value="bungalow">Bungalow</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.tenure}
-                onValueChange={handleTenureChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Tenure" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="any">Any Tenure</SelectItem>
-                  <SelectItem value="freehold">Freehold</SelectItem>
-                  <SelectItem value="leasehold">Leasehold</SelectItem>
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.minBeds}
-                onValueChange={handleBedroomsChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Min Bedrooms" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="0">Any</SelectItem>
-                  {[1, 2, 3, 4, 5].map((num) => (
-                    <SelectItem key={num} value={num.toString()}>{num}+ beds</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filters.radius.toString()}
-                onValueChange={handleRadiusChange}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Search Radius" />
-                </SelectTrigger>
-                <SelectContent>
-                  {[0.25, 0.5, 1, 2, 5, 10].map((num) => (
-                    <SelectItem key={num} value={num.toString()}>{num} miles</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {viewMode === 'listed' && (
-                <Select
-                  value={filters.sortBy}
-                  onValueChange={handleSortChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Sort By" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="most_recent_sale_date">Most Recent Sale</SelectItem>
-                    <SelectItem value="distance">Distance</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            {/* Search Bar */}
-            <div className="flex gap-4 mt-6">
-              <Input
-                type="text"
-                placeholder="Enter location (postcode, city, street, etc.)"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="flex-1 h-12"
-              />
-              <Button
-                onClick={handleSearch}
-                className="h-12 px-8 bg-gradient-to-r from-emerald-500 to-cyan-500 text-white hover:from-emerald-600 hover:to-cyan-600"
-                disabled={isLoading}
-              >
-                {isLoading ? <LoadingSpinner size="sm" /> : 'Search'}
-              </Button>
-            </div>
-
-            {/* Add advanced options toggles */}
-            <div className="mt-4 flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input 
-                  type="checkbox" 
-                  checked={showPricePerSqft} 
-                  onChange={(e) => setShowPricePerSqft(e.target.checked)}
-                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                Show price per sq.ft
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input 
-                  type="checkbox" 
-                  checked={showStampDuty} 
-                  onChange={(e) => setShowStampDuty(e.target.checked)}
-                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                Show stamp duty
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input 
-                  type="checkbox" 
-                  checked={showPlanningApplications} 
-                  onChange={(e) => setShowPlanningApplications(e.target.checked)}
-                  className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
-                />
-                Show planning applications
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Results Section */}
-        {isLoading ? (
-          <div className="flex justify-center items-center h-64">
-            <LoadingSpinner size="lg" />
-          </div>
-        ) : displayProperties.length > 0 ? (
-          <>
-            {/* Area insights summary - show average prices, trends, etc. */}
-            {areaInsights.askingPrices?.data && (
-              <div className="mb-8 bg-white rounded-lg shadow p-6">
-                <h3 className="text-lg font-semibold mb-4">Area Insights for {searchTerm}</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="bg-emerald-50 rounded-lg p-4">
-                    <h4 className="text-emerald-800 text-sm font-medium mb-2">Average Asking Price</h4>
-                    <p className="text-2xl font-bold text-emerald-700">
-                      {formatCurrency(areaInsights.askingPrices.data.mean || 0)}
-                    </p>
-                  </div>
-                  
-                  <div className="bg-blue-50 rounded-lg p-4">
-                    <h4 className="text-blue-800 text-sm font-medium mb-2">Median Asking Price</h4>
-                    <p className="text-2xl font-bold text-blue-700">
-                      {formatCurrency(areaInsights.askingPrices.data.median || 0)}
-                    </p>
-                  </div>
-                  
-                  {areaInsights.priceHistory?.data?.trend_percentage !== undefined && (
-                    <div className="bg-purple-50 rounded-lg p-4">
-                      <h4 className="text-purple-800 text-sm font-medium mb-2">Price Trend (12 months)</h4>
-                      <p className="text-2xl font-bold text-purple-700">
-                        {areaInsights.priceHistory.data.trend_percentage.toFixed(1)}%
-                      </p>
-                    </div>
-                  )}
-                </div>
+            
+            {dbDiagnostics && (
+              <div className="mt-4 p-3 bg-white rounded border text-xs font-mono text-black overflow-auto max-h-40">
+                <pre>{JSON.stringify(dbDiagnostics, null, 2)}</pre>
               </div>
             )}
             
-            {/* Properties grid */}
-            <div className="mb-6">
-              <h3 className="text-lg text-gray-600">
-                Found {totalResults} {viewMode === 'listed' ? 'listed' : 'sold'} properties
-              </h3>
+            <div className="mt-4 text-sm">
+              <p className="font-semibold">Manual Setup Instructions:</p>
+              <ol className="list-decimal ml-5 mt-1 space-y-1">
+                <li>Go to your Supabase dashboard</li>
+                <li>Navigate to the "SQL Editor" section</li>
+                <li>Create a new query</li>
+                <li>Copy and paste the SQL from <code>src/lib/migrations/fix_scraper_cache.sql</code></li>
+                <li>Run the query</li>
+                <li>Return to this page and refresh</li>
+              </ol>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayProperties.map((property, index) => (
-                <Card 
-                  key={`${property.address}-${index}`} 
-                  className="overflow-hidden hover:shadow-lg transition-shadow duration-200 cursor-pointer"
-                  onClick={() => openPropertyModal(property)}
-                >
-                  {viewMode === 'listed' ? (
-                    <>
-                      <div className="aspect-video relative bg-gray-100">
-                        {property.image_url ? (
-                          <img
-                            src={property.image_url}
-                            alt={property.address || "Property"}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex flex-col items-center justify-center">
-                            <Home className="h-12 w-12 text-gray-300" />
-                            <p className="text-gray-400 text-sm mt-2">No image available</p>
-                          </div>
-                        )}
-                        <div className="absolute top-2 right-2 flex gap-2">
-                          <span className="bg-white/90 text-black px-3 py-1 rounded-full text-sm font-medium">
-                            {property.property_type}
-                          </span>
-                          {property.new_build && (
-                            <span className="bg-emerald-500/90 text-white px-3 py-1 rounded-full text-sm font-medium">
-                              New Build
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="p-4">
-                        <h3 className="font-semibold text-lg line-clamp-2 mb-2">
-                          {property.address}
-                        </h3>
-                        <p className="text-2xl font-bold mb-3 text-emerald-600">
-                          {formatCurrency(
-                            property.price || 
-                            property.asking_price || 
-                            property.last_sold_price ||
-                            (property as any).price_paid ||
-                            (property as any).latest_price || 
-                            0
-                          )}
-                        </p>
-                        
-                        {/* Show price per sq ft if available and enabled */}
-                        {showPricePerSqft && property.price_per_sqft && (
-                          <p className="text-sm text-gray-600 mb-3">
-                            {formatCurrency(property.price_per_sqft)}/sq.ft
-                            {property.size_sq_feet && ` · ${property.size_sq_feet} sq.ft`}
-                            {property.size_sq_meters && ` · ${property.size_sq_meters} m²`}
-                          </p>
-                        )}
-                        
-                        <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
-                          <div className="flex items-center gap-1">
-                            <Bed className="h-4 w-4" />
-                            <span>{property.bedrooms || 'N/A'}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <MapPin className="h-4 w-4" />
-                            <span>{property.postcode}</span>
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Home className="h-4 w-4" />
-                            <span>{property.tenure || 'N/A'}</span>
-                          </div>
-                        </div>
-                        
-                        {/* Stamp Duty section */}
-                        {showStampDuty && property.stamp_duty !== undefined && (
-                          <div className="mt-2 mb-3">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Stamp Duty:</span>
-                              <span className="font-medium">{formatCurrency(property.stamp_duty)}</span>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Enhanced Investment Metrics */}
-                        {(property.estimated_rent || property.rental_yield || property.roi || property.estimated_growth) && (
-                          <div className="mt-3 pt-3 border-t border-gray-100">
-                            <h4 className="text-sm font-semibold text-gray-700 mb-2">Investment Potential</h4>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                              {property.estimated_rent && (
-                                <div className="bg-blue-50 p-2 rounded">
-                                  <p className="text-blue-800 font-medium">Est. Rent</p>
-                                  <p className="text-blue-600 font-bold">{formatCurrency(property.estimated_rent)}/mo</p>
-                                </div>
-                              )}
-                              {property.rental_yield && (
-                                <div className="bg-emerald-50 p-2 rounded">
-                                  <p className="text-emerald-800 font-medium">Yield</p>
-                                  <p className="text-emerald-600 font-bold">{property.rental_yield.toFixed(1)}%</p>
-                                </div>
-                              )}
-                              {property.roi && (
-                                <div className="bg-purple-50 p-2 rounded">
-                                  <p className="text-purple-800 font-medium">5yr ROI</p>
-                                  <p className="text-purple-600 font-bold">{property.roi.toFixed(1)}%</p>
-                                </div>
-                              )}
-                              {property.estimated_growth && (
-                                <div className="bg-amber-50 p-2 rounded">
-                                  <p className="text-amber-800 font-medium">Growth</p>
-                                  <p className="text-amber-600 font-bold">{property.estimated_growth.toFixed(1)}%</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="p-4">
-                      <h3 className="font-semibold text-lg line-clamp-2 mb-2">
-                        {property.address}
-                      </h3>
-                      <p className="text-2xl font-bold mb-3 text-emerald-600">
-                        {formatCurrency(
-                          property.sale_price || 
-                          property.price || 
-                          (property as any).price_paid || 
-                          0
-                        )}
-                      </p>
-                      <div className="flex flex-wrap gap-4 text-sm text-gray-600 mb-3">
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-4 w-4" />
-                          <span>{property.postcode}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Home className="h-4 w-4" />
-                          <span>{property.property_type}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-4 w-4" />
-                          <span>Sold: {new Date(property.date_of_transfer).toLocaleDateString()}</span>
-                        </div>
-                        {property.bedrooms && (
-                          <div className="flex items-center gap-1">
-                            <Bed className="h-4 w-4" />
-                            <span>{property.bedrooms} beds</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* Stamp Duty section */}
-                      {showStampDuty && property.stamp_duty !== undefined && (
-                        <div className="mt-2 mb-3">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Stamp Duty:</span>
-                            <span className="font-medium">{formatCurrency(property.stamp_duty)}</span>
-                          </div>
-                        </div>
-                      )}
-                      
-                      {/* Enhanced Investment Metrics */}
-                      {(property.estimated_rent || property.rental_yield || property.roi || property.estimated_growth) && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <h4 className="text-sm font-semibold text-gray-700 mb-2">Investment Potential</h4>
-                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                            {property.estimated_rent && (
-                              <div className="bg-blue-50 p-2 rounded">
-                                <p className="text-blue-800 font-medium">Est. Rent</p>
-                                <p className="text-blue-600 font-bold">{formatCurrency(property.estimated_rent)}/mo</p>
-                              </div>
-                            )}
-                            {property.rental_yield && (
-                              <div className="bg-emerald-50 p-2 rounded">
-                                <p className="text-emerald-800 font-medium">Yield</p>
-                                <p className="text-emerald-600 font-bold">{property.rental_yield.toFixed(1)}%</p>
-                              </div>
-                            )}
-                            {property.roi && (
-                              <div className="bg-purple-50 p-2 rounded">
-                                <p className="text-purple-800 font-medium">5yr ROI</p>
-                                <p className="text-purple-600 font-bold">{property.roi.toFixed(1)}%</p>
-                              </div>
-                            )}
-                            {property.estimated_growth && (
-                              <div className="bg-amber-50 p-2 rounded">
-                                <p className="text-amber-800 font-medium">Growth</p>
-                                <p className="text-amber-600 font-bold">{property.estimated_growth.toFixed(1)}%</p>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </Card>
-              ))}
-            </div>
-
-            {/* Pagination */}
-            {totalPages > 1 && (
-              <div className="mt-8 flex justify-center gap-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setFilters(f => ({ ...f, page: Math.max(1, f.page - 1) }))}
-                  disabled={filters.page === 1}
-                >
-                  Previous
-                </Button>
-                <span className="flex items-center px-4">
-                  Page {filters.page} of {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  onClick={() => setFilters(f => ({ ...f, page: Math.min(totalPages, f.page + 1) }))}
-                  disabled={filters.page === totalPages}
-                >
-                  Next
-                </Button>
-              </div>
-            )}
-          </>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-600">
-              No {viewMode} properties found. Try adjusting your search criteria.
-            </p>
           </div>
         )}
-      </main>
+        
+        <div className="mb-4">
+          <EnvironmentDebug />
+        </div>
+        
+        {apiKeyInvalid && (
+          <div className="mb-4 rounded-md bg-red-50 p-4 text-red-800 border-2 border-red-300 shadow-md">
+            <h3 className="font-bold text-lg mb-3">Invalid Apify API Token</h3>
+            
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-md">
+                  The application cannot connect to the Apify API with the current token. Property searches require a valid Apify token.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4 bg-white p-4 rounded-md border border-red-200">
+              <h4 className="font-bold mb-2">How to Fix This Issue:</h4>
+              <ol className="list-decimal ml-5 space-y-2">
+                <li>
+                  <span className="font-medium">Verify your Apify token</span>: 
+                  Check that you're using the correct token from your Apify account.
+                </li>
+                <li>
+                  <span className="font-medium">Add it to your .env.local file</span>: 
+                  <code className="bg-gray-100 px-1 py-0.5 rounded ml-1">VITE_APIFY_API_TOKEN=your_token_here</code>
+                </li>
+                <li>
+                  <span className="font-medium">Restart your dev server</span>: Using <code className="bg-gray-100 px-1 py-0.5 rounded">npm run dev</code> or <code className="bg-gray-100 px-1 py-0.5 rounded">yarn dev</code>
+                </li>
+              </ol>
+            </div>
+            
+            <div className="mt-4 p-3 bg-yellow-50 text-yellow-800 border border-yellow-200 rounded-md">
+              <h4 className="font-bold">About Apify</h4>
+              <p className="mt-1">
+                This application uses Apify's Rightmove Scraper to fetch property data from Rightmove. You need a valid Apify account and API token to use this feature.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {scraperError && scraperError.includes('Failed to fetch') && (
+          <div className="mb-4 rounded-md bg-red-50 p-4 text-red-800 border-2 border-red-300 shadow-md">
+            <h3 className="font-bold text-lg mb-3">Network Connection Error</h3>
+            
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-md">
+                  The application failed to connect to the Apify API. This is typically a network connectivity issue.
+                </p>
+              </div>
+            </div>
+            
+            <div className="mt-4 bg-white p-4 rounded-md border border-red-200">
+              <h4 className="font-bold mb-2">How to Fix This Issue:</h4>
+              <ol className="list-decimal ml-5 space-y-2">
+                <li>
+                  <span className="font-medium">Check your internet connection</span>: 
+                  Ensure you have a stable internet connection.
+                </li>
+                <li>
+                  <span className="font-medium">Check your firewall settings</span>: 
+                  Your firewall might be blocking connections to api.apify.com.
+                </li>
+                <li>
+                  <span className="font-medium">Try using a direct property search</span>: 
+                  If you have a specific property ID, try using the direct search below.
+                </li>
+                <li>
+                  <span className="font-medium">Use the Rightmove Scraper Test</span>: 
+                  Expand the Environment Debug panel and use the "Test Rightmove Scraper" button to check if the API is accessible.
+                </li>
+              </ol>
+            </div>
+
+            <div className="mt-4 p-3 bg-blue-50 text-blue-800 border border-blue-200 rounded-md">
+              <h4 className="font-bold mb-2">Try Direct Property ID Search</h4>
+              <p className="mb-2 text-sm">
+                Search for a specific property by ID:
+              </p>
+              <div className="flex gap-2 items-center mt-2">
+                <Input
+                  placeholder="Enter Rightmove property ID (e.g. 150455012)"
+                  value={directPropertyId}
+                  onChange={(e) => setDirectPropertyId(e.target.value)}
+                  className="max-w-xs"
+                />
+                <Button
+                  onClick={handleDirectPropertySearch} 
+                  disabled={isDirectPropertyLoading}
+                  variant="default"
+                  size="sm"
+                >
+                  {isDirectPropertyLoading ? <LoadingSpinner size="sm" /> : "Search Property"}
+                </Button>
+              </div>
+              <p className="mt-2 text-xs">
+                The property ID is the number in the Rightmove URL after "/properties/". 
+                Example: https://www.rightmove.co.uk/properties/<strong>150455012</strong>
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {showDebugPanel && import.meta.env.DEV && searchDetails && (
+          <SearchDebugPanel searchDetails={searchDetails} properties={properties} />
+        )}
+        
+        <div className="mb-6 flex flex-wrap gap-4 rounded-lg bg-white p-6 shadow-md">
+          <div className="w-full md:w-64">
+            <label className="mb-2 block font-medium" htmlFor="location">
+              Location
+            </label>
+            <Input
+              id="location"
+              type="text"
+              placeholder="e.g. London, Manchester, B16"
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          {/* Add debug mode toggle only in development */}
+          {import.meta.env.DEV && (
+            <div className="w-full flex justify-end mb-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setShowDebugPanel(!showDebugPanel)}
+                className="text-xs"
+              >
+                {showDebugPanel ? "Hide Debug Panel" : "Show Debug Panel"}
+              </Button>
+            </div>
+          )}
+
+          <div className="w-full sm:w-1/2 md:w-32">
+            <label className="mb-2 block font-medium" htmlFor="minPrice">
+              Min Price
+            </label>
+            <Input
+              id="minPrice"
+              type="number"
+              placeholder="Min £"
+              value={minPrice}
+              onChange={(e) => setMinPrice(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          
+          <div className="w-full sm:w-1/2 md:w-32">
+            <label className="mb-2 block font-medium" htmlFor="maxPrice">
+              Max Price
+            </label>
+            <Input
+              id="maxPrice"
+              type="number"
+              placeholder="Max £"
+              value={maxPrice}
+              onChange={(e) => setMaxPrice(e.target.value)}
+              className="w-full"
+            />
+          </div>
+
+          <div className="w-full sm:w-1/2 md:w-32">
+            <label className="mb-2 block font-medium" htmlFor="minBeds">
+              Min Beds
+            </label>
+            <Input
+              id="minBeds"
+              type="number"
+              placeholder="Min"
+              value={minBeds}
+              onChange={(e) => setMinBeds(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          
+          <div className="w-full sm:w-1/2 md:w-32">
+            <label className="mb-2 block font-medium" htmlFor="maxBeds">
+              Max Beds
+            </label>
+            <Input
+              id="maxBeds"
+              type="number"
+              placeholder="Max"
+              value={maxBeds}
+              onChange={(e) => setMaxBeds(e.target.value)}
+              className="w-full"
+            />
+          </div>
+          
+          <div className="w-full md:w-32">
+            <label className="mb-2 block font-medium" htmlFor="propertyType">
+              Property Type
+            </label>
+            <select
+              id="propertyType"
+              value={propertyType}
+              onChange={(e) => setPropertyType(e.target.value)}
+              className="w-full rounded-md border border-gray-300 px-3 py-2"
+            >
+              <option value="">Any</option>
+              <option value="detached">Detached</option>
+              <option value="semi-detached">Semi-Detached</option>
+              <option value="terraced">Terraced</option>
+              <option value="flat">Flat</option>
+              <option value="bungalow">Bungalow</option>
+            </select>
+          </div>
+          
+          <div className="flex w-full items-end md:w-auto">
+            <Button 
+              onClick={() => {
+                if (!loading) {
+                  handleSearch(location);
+                }
+              }} 
+              disabled={loading} 
+              className="w-full md:w-auto"
+            >
+              {loading ? (
+                <div className="flex items-center">
+                  <LoadingSpinner size="sm" />
+                  <span className="ml-2">Searching...</span>
+                </div>
+              ) : "Search"}
+            </Button>
+          </div>
+        </div>
+        
+        {isMockData && (
+          <div className="mb-4 rounded-md bg-amber-50 p-4 text-amber-800 border border-amber-200">
+            <h3 className="font-bold mb-2">Using Mock Data</h3>
+            <p className="flex items-center mb-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="mr-2 h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+              Mock data is being displayed instead of real Rightmove properties. 
+            </p>
+            
+            <EnvironmentDebug />
+            
+            <div className="text-sm mt-3">
+              <p className="font-semibold mb-1">Possible reasons:</p>
+              <ul className="list-disc pl-5">
+                <li className={import.meta.env.VITE_USE_MOCK_DATA === 'true' ? 'font-bold' : ''}>
+                  Environment variable VITE_USE_MOCK_DATA is set to 'true' 
+                  {import.meta.env.VITE_USE_MOCK_DATA === 'true' && " ✓"}
+                </li>
+                <li className={!isTableReady ? 'font-bold' : ''}>
+                  The scraper_cache table is not properly set up
+                  {!isTableReady && " ✓"}
+                </li>
+                <li>The Rightmove scraper encountered an error fetching property data</li>
+                <li>Network connectivity issues accessing Rightmove</li>
+              </ul>
+            </div>
+            
+            <div className="mt-3 flex gap-2">
+              <Button variant="outline" size="sm" onClick={runDatabaseDiagnostics} disabled={runningDiagnostics}>
+                {runningDiagnostics ? <LoadingSpinner size="sm" /> : "Run Diagnostics"}
+              </Button>
+              <Button variant="outline" size="sm" onClick={initializeScraper} disabled={initializing}>
+                {initializing ? <LoadingSpinner size="sm" /> : "Initialize Database"}
+              </Button>
+            </div>
+          </div>
+        )}
+        
+        {searchError && (
+          <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md mb-4">
+            <div className="flex items-start">
+              <div className="flex-shrink-0 mt-0.5">
+                <svg className="h-5 w-5 text-red-600" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium">Search Error</h3>
+                <p className="mt-1 text-sm">{searchError}</p>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 min-h-[200px] bg-white rounded-lg shadow-md animate-fadein">
+            <div className="animate-spin h-12 w-12 border-b-2 border-blue-600 rounded-full mb-4"></div>
+            <p className="text-gray-600 font-medium">Searching properties in {location}...</p>
+            <p className="text-sm text-gray-500 mt-2">This may take 15-30 seconds</p>
+            <div className="mt-4 w-64 bg-gray-200 rounded-full h-2.5">
+              <div className="bg-blue-600 h-2.5 rounded-full animate-pulse" style={{ width: '70%' }}></div>
+            </div>
+          </div>
+        ) : properties.length > 0 ? (
+          <React.Fragment>
+            {/* Wrap in try-catch to prevent white screen */}
+            {(() => {
+              try {
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {properties.map((property) => (
+                      <div key={property.id || Math.random().toString()}>
+                        <MemoizedPropertyCard 
+                          property={property}
+                          onSelect={handlePropertySelect}
+                          analyzingProperties={analyzingProperties}
+                          propertyAnalysis={propertyAnalysis}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                );
+              } catch (error) {
+                console.error('Error rendering property grid:', error);
+                return (
+                  <div className="bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-md">
+                    <h3 className="font-bold">Error Displaying Properties</h3>
+                    <p className="mt-2">There was an error displaying the property results. Please try refreshing the page.</p>
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-sm">Error details</summary>
+                      <pre className="mt-2 text-xs p-2 bg-red-100 rounded">
+                        {error instanceof Error ? error.message : String(error)}
+                      </pre>
+                    </details>
+                  </div>
+                );
+              }
+            })()}
+          </React.Fragment>
+        ) : !searchError && location ? (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              aria-hidden="true"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <h3 className="mt-2 text-lg font-medium text-gray-900">No properties found</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Try searching for a different location or adjusting your filters.
+            </p>
+          </div>
+        ) : null}
+      </div>
       
-      {/* Render the modal component */}
-      <PropertyModal />
+      {selectedProperty && (
+        <PropertyModal
+          property={selectedProperty}
+          onClose={() => setSelectedProperty(null)}
+          saleHistoryData={selectedPropertySaleHistory}
+          areaInsights={selectedPropertyAreaInsights}
+          investmentAnalysis={selectedPropertyAnalysis}
+        />
+      )}
     </Layout>
   );
 } 

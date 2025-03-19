@@ -304,23 +304,7 @@ export default function WaitlistPage() {
                     </Button>
                   </form>
                   
-                  <div className="mt-4 relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-border"></div>
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="px-2 bg-muted/30 text-muted-foreground">Or continue with</span>
-                    </div>
-                  </div>
-                  
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="w-full mt-4"
-                    onClick={handleGoogleLogin}
-                  >
-                    Sign in with Google
-                  </Button>
+
                 </Card>
               )}
             </div>

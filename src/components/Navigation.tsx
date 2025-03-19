@@ -30,6 +30,7 @@ const Navigation = () => {
     { path: '/deals', label: 'Deals' },
     { path: '/trends', label: 'Market Trends' },
     { path: '/insights', label: 'Market Insights' },
+    { path: '/research-reports', label: 'Research & Reports' },
     { path: '/calculators', label: 'Calculators' },
   ];
 

@@ -241,6 +241,56 @@ export type Database = {
           },
         ]
       }
+      report_requests: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string
+          status: 'pending' | 'in_progress' | 'completed' | 'rejected'
+          file_url: string | null
+          file_name: string | null
+          created_at: string
+          updated_at: string
+          completed_at: string | null
+          notes: string | null
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description: string
+          status?: 'pending' | 'in_progress' | 'completed' | 'rejected'
+          file_url?: string | null
+          file_name?: string | null
+          created_at?: string
+          updated_at?: string
+          completed_at?: string | null
+          notes?: string | null
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          description?: string
+          status?: 'pending' | 'in_progress' | 'completed' | 'rejected'
+          file_url?: string | null
+          file_name?: string | null
+          created_at?: string
+          updated_at?: string
+          completed_at?: string | null
+          notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_requests_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       saved_properties: {
         Row: {
           created_at: string

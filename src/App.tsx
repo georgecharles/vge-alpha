@@ -30,6 +30,9 @@ import Calculators from "./pages/Calculators";
 import ReportDetailPage from "./components/ReportDetailPage";
 import WaitlistPage from "./components/WaitlistPage";
 import { supabase } from "./lib/supabase";
+import ResearchAndReports from "./pages/ResearchAndReports";
+import AdminReports from "./pages/AdminReports";
+import { setupBackgroundJobs } from './lib/backgroundJobs';
 
 // Add TypeScript declaration for import.meta.env
 declare global {
@@ -201,6 +204,13 @@ function AppContent() {
     document.documentElement.classList.remove("dark");
   }, []);
 
+  useEffect(() => {
+    // Set up background jobs for property listings when in production
+    if (import.meta.env.PROD) {
+      setupBackgroundJobs();
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {location.pathname !== '/waitlist' && (
@@ -341,6 +351,16 @@ function AppContent() {
           <Route path="/messages" element={
             <PrivateRoute>
               <Messages />
+            </PrivateRoute>
+          } />
+          <Route path="/research-reports" element={
+            <PrivateRoute>
+              <ResearchAndReports />
+            </PrivateRoute>
+          } />
+          <Route path="/admin/reports" element={
+            <PrivateRoute>
+              <AdminReports />
             </PrivateRoute>
           } />
           {import.meta.env.VITE_TEMPO === "true" && (

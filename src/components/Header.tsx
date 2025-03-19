@@ -1,6 +1,6 @@
 import React from "react";
 import { Button } from "./ui/button";
-import { LogIn, Menu, MessageCircle } from "lucide-react";
+import { LogIn, Menu, MessageCircle, FileText } from "lucide-react";
 import { MobileNav } from "./MobileNav";
 import {
   NavigationMenu,
@@ -421,7 +421,6 @@ export default function Header({
                             {actualUserProfile?.email}
                           </div>
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => navigate("/dashboard")}>
                           <LayoutDashboard className="mr-2 h-4 w-4" />
                           <span>Dashboard</span>
@@ -434,6 +433,16 @@ export default function Header({
                           <MessageCircle className="mr-2 h-4 w-4" />
                           <span>Messages</span>
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => navigate("/research-reports")}>
+                          <FileText className="mr-2 h-4 w-4" />
+                          <span>Research & Reports</span>
+                        </DropdownMenuItem>
+                        {(userProfile?.role === 'admin') && (
+                          <DropdownMenuItem onClick={() => navigate("/admin/reports")}>
+                            <FileText className="mr-2 h-4 w-4" />
+                            <span>Admin Reports</span>
+                          </DropdownMenuItem>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem 
                           className="text-red-500 focus:text-red-500" 

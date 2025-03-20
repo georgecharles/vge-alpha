@@ -1059,6 +1059,41 @@ function getLocationPriceData(location: string): { basePrice: number, priceVaria
 }
 
 /**
+ * Handles API calls to Apify, either directly or through a proxy depending on environment
+ */
+export async function callApifyApi(endpoint: string, options: RequestInit): Promise<Response> {
+  console.log(`Calling Apify API: ${endpoint}`);
+  
+  // In production, use our proxy endpoint
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    const proxyUrl = '/api/apify-proxy'; // This will be a Next.js API route
+    
+    console.log(`Using proxy endpoint for Apify API call: ${proxyUrl}`);
+    
+    // Send the original request details to our proxy
+    const proxyOptions: RequestInit = {
+      ...options,
+      method: 'POST',
+      headers: {
+        ...options.headers,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        originalEndpoint: endpoint,
+        originalMethod: options.method || 'GET',
+        originalBody: options.body ? JSON.parse(options.body as string) : null,
+      }),
+    };
+    
+    return fetch(proxyUrl, proxyOptions);
+  }
+  
+  // In development or server-side, call Apify directly
+  console.log('Calling Apify API directly (development or server-side)');
+  return fetch(endpoint, options);
+}
+
+/**
  * Search for properties based on filters
  */
 export async function searchRightmoveProperties(
@@ -1445,4 +1480,63 @@ const validateScraperAPIKey = async (): Promise<boolean> => {
       console.warn('Scraper cache table does not exist. This may affect performance.');
     }
   });
-})(); 
+})();
+
+// Update this function to use our proxy-aware API call function
+async function getPropertyRunStatus(runId: string): Promise<ApifyRunResponse> {
+  const apifyApiKey = import.meta.env.VITE_APIFY_API_KEY || '';
+  const url = `https://api.apify.com/v2/actor-runs/${runId}`;
+  
+  const options: RequestInit = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apifyApiKey}`
+    }
+  };
+  
+  try {
+    // Use our proxy-aware API call function
+    const response = await callApifyApi(url, options);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get run status: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error getting run status:', error);
+    throw new Error(`Failed to get run status: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+// Also update the getPropertyDataset function
+async function getPropertyDataset(datasetId: string): Promise<RightmoveProperty[]> {
+  const apifyApiKey = import.meta.env.VITE_APIFY_API_KEY || '';
+  const url = `https://api.apify.com/v2/datasets/${datasetId}/items?clean=true&format=json`;
+  
+  const options: RequestInit = {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apifyApiKey}`
+    }
+  };
+  
+  try {
+    // Use our proxy-aware API call function
+    const response = await callApifyApi(url, options);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to get dataset: ${response.statusText}`);
+    }
+    
+    const items = await response.json();
+    console.log(`Fetched ${items.length} items from Apify dataset`);
+    
+    return items.map((item: any) => convertApifyPropertyToRightmoveProperty(item));
+  } catch (error) {
+    console.error('Error getting dataset:', error);
+    throw new Error(`Failed to get dataset: ${error instanceof Error ? error.message : String(error)}`);
+  }
+} 

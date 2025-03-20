@@ -9,39 +9,22 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
- * Format a number as currency in GBP
+ * Format a number as currency
  */
-export const formatCurrency = (value: number | string | undefined | null): string => {
-  // Handle undefined, null or NaN values
-  if (value === undefined || value === null || (typeof value === 'number' && isNaN(value))) {
-    console.warn('Received invalid value for currency formatting:', value);
-    return '£0'; // Return a default value
+export function formatCurrency(value: number | null | undefined): string {
+  // Check for null, undefined, or NaN
+  if (value === null || value === undefined || isNaN(value)) {
+    return '£0';
   }
   
-  // Convert string values to numbers if needed
-  let numericValue: number;
-  
-  if (typeof value === 'string') {
-    // Remove any currency symbols, commas, and spaces
-    const cleanedValue = value.replace(/[£$€,\s]/g, '');
-    numericValue = parseFloat(cleanedValue);
-    
-    // Check if parsing was successful
-    if (isNaN(numericValue)) {
-      console.warn(`Failed to parse currency string: "${value}" → "${cleanedValue}" → NaN`);
-      return '£0';
-    }
-  } else {
-    numericValue = value;
-  }
-  
-  // Format the number using the GB locale and GBP currency
+  // Use Intl.NumberFormat for proper currency formatting
   return new Intl.NumberFormat('en-GB', {
     style: 'currency',
     currency: 'GBP',
+    minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(numericValue);
-};
+  }).format(value);
+}
 
 // Add any other utility functions you need
 export function formatDate(date: string | Date): string {

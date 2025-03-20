@@ -237,60 +237,15 @@ export const ensureScraperCacheTableExists = async (): Promise<boolean> => {
   }
 };
 
-// Function to test if the ScraperAPI key is valid by making a simple request
-const testScraperAPIKey = async (): Promise<{success: boolean, message: string, status?: number}> => {
-  try {
-    console.log('Testing ScraperAPI key...');
-    // Try to scrape a simple website
-    const testUrl = 'https://www.example.com';
-    const scraperApiUrl = `${SCRAPER_API_URL}?api_key=${SCRAPER_API_KEY}&url=${encodeURIComponent(testUrl)}`;
-    
-    const response = await fetch(scraperApiUrl);
-    const success = response.ok;
-    const status = response.status;
-    
-    let message = success 
-      ? 'Valid API key' 
-      : `Invalid API key (Status: ${status} - ${response.statusText})`;
-      
-    // Specific error handling for common status codes
-    if (status === 401) {
-      message = 'Unauthorized: Your ScraperAPI key is invalid or expired';
-    } else if (status === 403) {
-      message = 'Forbidden: Your ScraperAPI account may be suspended';
-    } else if (status === 404) {
-      message = 'Not Found: Your ScraperAPI key is invalid or the API endpoint has changed';
-    } else if (status === 429) {
-      message = 'Too Many Requests: You have exceeded your ScraperAPI plan limits';
-    }
-    
-    console.log('ScraperAPI key test result:', message);
-    return { success, message, status };
-  } catch (error) {
-    console.error('Error testing ScraperAPI key:', error);
-    return { 
-      success: false, 
-      message: `Connection error: ${error instanceof Error ? error.message : String(error)}`
-    };
-  }
+// Function to test the ScraperAPI key
+const testScraperAPIKey = async (): Promise<{ success: boolean; message: string }> => {
+  console.log('ScraperAPI validation skipped - application now uses Apify exclusively');
+  return { success: true, message: 'ScraperAPI validation skipped - application now uses Apify exclusively' };
 };
 
-// Check if the API key is valid and log a warning if it's not
-export const validateScraperAPIKey = async (): Promise<boolean> => {
-  // Skip validation if we're using the mock data flag
-  if (import.meta.env.VITE_USE_MOCK_DATA === 'true') {
-    console.log('Using mock data, skipping API key validation');
-    return true;
-  }
-  
-  const result = await testScraperAPIKey();
-  
-  if (!result.success) {
-    console.error(`⚠️ INVALID SCRAPER API KEY: ${result.message}`);
-    console.error('Get a valid key at https://www.scraperapi.com/ and set it in .env.local as VITE_SCRAPER_API_KEY');
-    return false;
-  }
-  
+// Validate ScraperAPI key
+const validateScraperAPIKey = async (): Promise<boolean> => {
+  console.log('ScraperAPI validation skipped - application now uses Apify exclusively');
   return true;
 };
 
@@ -301,25 +256,14 @@ export const isUsingDefaultAPIKey = (): boolean => {
 
 // Initialize the scraper on import
 (() => {
-  console.log('Initializing Rightmove scraper...');
-  console.log('Mock data mode:', import.meta.env.VITE_USE_MOCK_DATA === 'true' ? 'ENABLED' : 'DISABLED');
+  console.log('Initializing Rightmove scraper... (using Apify exclusively)');
   
-  // Check if we have an API key
-  if (isUsingDefaultAPIKey()) {
-    console.warn('Using default ScraperAPI key. This key is NOT VALID. Please get your own key at www.scraperapi.com');
-    console.warn('Set your key in .env.local file as VITE_SCRAPER_API_KEY=your_key_here');
-  }
-  
-  // Validate the API key in the background
-  validateScraperAPIKey().then(isValid => {
-    if (!isValid && import.meta.env.VITE_USE_MOCK_DATA !== 'true') {
-      console.error('ScraperAPI key validation failed. Property searches will not work.');
-    }
-  });
+  // Skip ScraperAPI validation since we're using Apify exclusively
+  console.log('✅ ScraperAPI validation skipped - application now uses Apify exclusively');
   
   // Ensure the cache table exists (don't await - let it run in background)
   ensureScraperCacheTableExists().then(exists => {
-    if (!exists && import.meta.env.VITE_USE_MOCK_DATA !== 'true') {
+    if (!exists) {
       console.warn('Scraper cache table does not exist. This may affect performance.');
     }
   });
